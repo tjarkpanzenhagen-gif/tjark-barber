@@ -7,7 +7,10 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createAuthClient()
   const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'magiclink' })
-  if (error) return NextResponse.json({ error: 'Code ungültig oder abgelaufen.' }, { status: 400 })
+  if (error) {
+    console.error('verifyOtp error:', error)
+    return NextResponse.json({ error: error.message }, { status: 400 })
+  }
 
   const isNew = !data.user?.user_metadata?.full_name
   return NextResponse.json({ isNew })
