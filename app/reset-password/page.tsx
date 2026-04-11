@@ -1,17 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 export default function ResetPasswordPage() {
+  const [ready, setReady] = useState(false)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useRef(createClient()).current
+
+  useEffect(() => {
+    // Supabase liest den #access_token Hash automatisch aus der URL
+    // und feuert PASSWORD_RECOVERY sobald die Session gesetzt ist
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        setReady(true)
+      }
+    })
+
+    // Falls schon eine aktive Session besteht (z.B. bereits eingeloggt)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -21,14 +39,7 @@ export default function ResetPasswordPage() {
     setLoading(true)
     try {
       const { error } = await supabase.auth.updateUser({ password })
-      if (error) {
-        if (error.message.includes('session')) {
-          setError('Sitzung abgelaufen. Bitte neuen Reset-Link anfordern.')
-        } else {
-          setError(error.message)
-        }
-        return
-      }
+      if (error) { setError(error.message); return }
       await supabase.auth.signOut()
       router.push('/login')
     } catch {
@@ -36,6 +47,23 @@ export default function ResetPasswordPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (!ready) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] px-4">
+        <div className="text-center">
+          <div className="w-8 h-8 rounded-full border-2 animate-spin mx-auto mb-4"
+            style={{ borderColor: 'var(--gold)', borderTopColor: 'transparent' }} />
+          <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
+            Link wird geprüft…
+          </p>
+          <Link href="/forgot-password" className="text-xs hover:underline" style={{ color: 'var(--text-muted)' }}>
+            Neuen Link anfordern
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -68,14 +96,9 @@ export default function ResetPasswordPage() {
           </div>
 
           {error && (
-            <div className="text-sm px-3 py-2 rounded-xl" style={{ background: '#1a0a0a', color: '#ff7070', border: '1px solid #5a1a1a' }}>
-              <p>{error}</p>
-              {error.includes('abgelaufen') && (
-                <Link href="/forgot-password" className="underline mt-1 block" style={{ color: 'var(--gold)' }}>
-                  Neuen Link anfordern →
-                </Link>
-              )}
-            </div>
+            <p className="text-sm px-3 py-2 rounded-xl" style={{ background: '#1a0a0a', color: '#ff7070', border: '1px solid #5a1a1a' }}>
+              {error}
+            </p>
           )}
 
           <button type="submit" disabled={loading}
