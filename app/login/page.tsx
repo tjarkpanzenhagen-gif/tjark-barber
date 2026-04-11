@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -12,21 +12,26 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useRef(createClient()).current
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (error) { setError('E-Mail oder Passwort falsch.'); return }
-    if (!remember) {
-      // Session läuft beim Schließen des Browsers aus
-      await supabase.auth.updateUser({})
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setError('E-Mail oder Passwort falsch.')
+        setPassword('')
+        return
+      }
+      router.push('/book')
+      router.refresh()
+    } catch {
+      setError('Verbindungsfehler. Bitte nochmal versuchen.')
+    } finally {
+      setLoading(false)
     }
-    router.push('/book')
-    router.refresh()
   }
 
   return (
