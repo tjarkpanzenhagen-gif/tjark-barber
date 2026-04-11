@@ -1,11 +1,15 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.split('\n')[0].trim()
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.split('\n')[0].trim()
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!.split('\n')[0].trim()
+
 export async function createClient() {
   const cookieStore = await cookies()
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() { return cookieStore.getAll() },
@@ -24,8 +28,8 @@ export async function createClient() {
 export async function createAdminClient() {
   const cookieStore = await cookies()
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    url,
+    serviceKey,
     {
       cookies: {
         getAll() { return cookieStore.getAll() },
