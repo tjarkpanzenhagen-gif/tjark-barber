@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 
 type Step = 'email' | 'otp' | 'name'
 
@@ -14,24 +13,23 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const digitRefs = useRef<(HTMLInputElement | null)[]>([])
-  const supabaseRef = useRef(createClient())
   const router = useRouter()
-  const supabase = supabaseRef.current
 
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      console.log('URL repr:', JSON.stringify(url))
-      console.log('Key length:', key?.length, 'last char code:', key?.charCodeAt(key.length - 1))
-      const { error } = await supabase.auth.signInWithOtp({ email })
-      if (error) { setError(error.message); return }
+      const res = await fetch('/api/auth/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Fehler beim Senden'); return }
       setStep('otp')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+    } catch {
+      setError('Verbindungsfehler. Bitte nochmal versuchen.')
     } finally {
       setLoading(false)
     }
@@ -41,16 +39,25 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const token = digits.join('')
-    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
-    setLoading(false)
-    if (error) { setError('Code ungültig oder abgelaufen.'); return }
-    const isNew = !data.user?.user_metadata?.full_name
-    if (isNew) {
-      setStep('name')
-    } else {
-      router.push('/book')
-      router.refresh()
+    try {
+      const token = digits.join('')
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Code ungültig.'); return }
+      if (data.isNew) {
+        setStep('name')
+      } else {
+        router.push('/book')
+        router.refresh()
+      }
+    } catch {
+      setError('Verbindungsfehler. Bitte nochmal versuchen.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -58,11 +65,21 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ data: { full_name: name.trim() } })
-    setLoading(false)
-    if (error) { setError(error.message); return }
-    router.push('/book')
-    router.refresh()
+    try {
+      const res = await fetch('/api/auth/update-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Fehler'); return }
+      router.push('/book')
+      router.refresh()
+    } catch {
+      setError('Verbindungsfehler. Bitte nochmal versuchen.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   function handleDigitChange(index: number, value: string) {
