@@ -1,105 +1,233 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+
+type Step = 'email' | 'otp' | 'name'
 
 export default function LoginPage() {
+  const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [remember, setRemember] = useState(true)
+  const [digits, setDigits] = useState(['', '', '', '', '', ''])
+  const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const digitRefs = useRef<(HTMLInputElement | null)[]>([])
   const router = useRouter()
+  const supabase = createClient()
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function sendOtp(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Fehler'); setPassword(''); return }
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    })
+    setLoading(false)
+    if (error) { setError(error.message); return }
+    setStep('otp')
+  }
+
+  async function verifyOtp(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    const token = digits.join('')
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+    setLoading(false)
+    if (error) { setError('Code ungültig oder abgelaufen.'); return }
+    const isNew = !data.user?.user_metadata?.full_name
+    if (isNew) {
+      setStep('name')
+    } else {
       router.push('/book')
       router.refresh()
-    } catch {
-      setError('Verbindungsfehler. Bitte nochmal versuchen.')
-    } finally {
-      setLoading(false)
     }
+  }
+
+  async function saveName(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    const { error } = await supabase.auth.updateUser({ data: { full_name: name.trim() } })
+    setLoading(false)
+    if (error) { setError(error.message); return }
+    router.push('/book')
+    router.refresh()
+  }
+
+  function handleDigitChange(index: number, value: string) {
+    const digit = value.replace(/\D/g, '').slice(-1)
+    const next = [...digits]
+    next[index] = digit
+    setDigits(next)
+    if (digit && index < 5) digitRefs.current[index + 1]?.focus()
+  }
+
+  function handleDigitKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Backspace' && !digits[index] && index > 0) {
+      digitRefs.current[index - 1]?.focus()
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    const next = ['', '', '', '', '', '']
+    pasted.split('').forEach((d, i) => { next[i] = d })
+    setDigits(next)
+    const focusIndex = Math.min(pasted.length, 5)
+    digitRefs.current[focusIndex]?.focus()
+  }
+
+  const inputStyle = {
+    background: 'var(--surface2)',
+    border: '1px solid var(--border)',
+    color: 'var(--text)',
   }
 
   return (
     <div className="flex items-center justify-center min-h-[80vh] px-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold">Anmelden</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Meld dich an um Termine zu buchen
-          </p>
-        </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm mb-1.5" style={{ color: 'var(--text-muted)' }}>E-Mail</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              placeholder="deine@email.de" />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm" style={{ color: 'var(--text-muted)' }}>Passwort</label>
-              <Link href="/forgot-password" className="text-xs hover:underline" style={{ color: 'var(--gold)' }}>
-                Vergessen?
-              </Link>
+        {/* ── Step: email ── */}
+        {step === 'email' && (
+          <>
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold">Anmelden</h1>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                Gib deine E-Mail ein – wir schicken dir einen Code.
+              </p>
             </div>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              placeholder="••••••••" />
-          </div>
+            <form onSubmit={sendOtp} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                  E-Mail
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  autoFocus
+                  placeholder="deine@email.de"
+                  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                  style={inputStyle}
+                />
+              </div>
+              {error && <ErrorBox message={error} />}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 rounded-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ background: 'var(--gold)' }}
+              >
+                {loading ? 'Sende Code…' : 'Code senden'}
+              </button>
+            </form>
+          </>
+        )}
 
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
-              onClick={() => setRemember(r => !r)}
-              style={{
-                background: remember ? 'var(--gold)' : 'var(--surface2)',
-                border: `1px solid ${remember ? 'var(--gold)' : 'var(--border)'}`,
-                cursor: 'pointer',
-              }}>
-              {remember && (
-                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                  <path d="M1 4l3 3 5-6" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
+        {/* ── Step: otp ── */}
+        {step === 'otp' && (
+          <>
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold">Code eingeben</h1>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                Wir haben einen 6-stelligen Code an <strong>{email}</strong> gesendet.
+              </p>
             </div>
-            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Angemeldet bleiben</span>
-          </label>
+            <form onSubmit={verifyOtp} className="flex flex-col gap-4">
+              <div className="flex gap-2 justify-center" onPaste={handlePaste}>
+                {digits.map((d, i) => (
+                  <input
+                    key={i}
+                    ref={el => { digitRefs.current[i] = el }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={d}
+                    onChange={e => handleDigitChange(i, e.target.value)}
+                    onKeyDown={e => handleDigitKeyDown(i, e)}
+                    autoFocus={i === 0}
+                    className="w-11 h-14 text-center text-xl font-bold rounded-xl outline-none"
+                    style={inputStyle}
+                  />
+                ))}
+              </div>
+              {error && <ErrorBox message={error} />}
+              <button
+                type="submit"
+                disabled={loading || digits.some(d => !d)}
+                className="w-full py-2.5 rounded-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ background: 'var(--gold)' }}
+              >
+                {loading ? 'Prüfe Code…' : 'Bestätigen'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStep('email'); setDigits(['', '', '', '', '', '']); setError('') }}
+                className="text-sm text-center hover:underline"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Andere E-Mail verwenden
+              </button>
+            </form>
+          </>
+        )}
 
-          {error && (
-            <p className="text-sm px-3 py-2 rounded-xl" style={{ background: '#1a0a0a', color: '#ff7070', border: '1px solid #5a1a1a' }}>
-              {error}
-            </p>
-          )}
+        {/* ── Step: name ── */}
+        {step === 'name' && (
+          <>
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold">Wie heißt du?</h1>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                Einmalig – damit wir deinen Termin zuordnen können.
+              </p>
+            </div>
+            <form onSubmit={saveName} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  required
+                  autoFocus
+                  placeholder="Max Mustermann"
+                  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                  style={inputStyle}
+                />
+              </div>
+              {error && <ErrorBox message={error} />}
+              <button
+                type="submit"
+                disabled={loading || !name.trim()}
+                className="w-full py-2.5 rounded-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ background: 'var(--gold)' }}
+              >
+                {loading ? 'Speichern…' : 'Weiter'}
+              </button>
+            </form>
+          </>
+        )}
 
-          <button type="submit" disabled={loading}
-            className="w-full py-2.5 rounded-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{ background: 'var(--gold)' }}>
-            {loading ? 'Anmelden…' : 'Anmelden'}
-          </button>
-        </form>
-
-        <p className="text-center text-sm mt-6" style={{ color: 'var(--text-muted)' }}>
-          Noch kein Konto?{' '}
-          <Link href="/register" style={{ color: 'var(--gold)' }} className="hover:underline">Registrieren</Link>
-        </p>
       </div>
     </div>
+  )
+}
+
+function ErrorBox({ message }: { message: string }) {
+  return (
+    <p
+      className="text-sm px-3 py-2 rounded-xl"
+      style={{ background: '#1a0a0a', color: '#ff7070', border: '1px solid #5a1a1a' }}
+    >
+      {message}
+    </p>
   )
 }
