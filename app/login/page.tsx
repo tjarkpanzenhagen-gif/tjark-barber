@@ -20,7 +20,7 @@ function LoginForm() {
 
   const [step, setStep] = useState<Step>(initialStep)
   const [email, setEmail] = useState('')
-  const [digits, setDigits] = useState(['', '', '', '', '', ''])
+  const [digits, setDigits] = useState(['', '', '', '', '', '', '', ''])
   const [name, setName] = useState('')
   const [error, setError] = useState(initialError)
   const [loading, setLoading] = useState(false)
@@ -99,7 +99,7 @@ function LoginForm() {
     const next = [...digits]
     next[index] = digit
     setDigits(next)
-    if (digit && index < 5) digitRefs.current[index + 1]?.focus()
+    if (digit && index < 7) digitRefs.current[index + 1]?.focus()
   }
 
   function handleDigitKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
@@ -110,11 +110,11 @@ function LoginForm() {
 
   function handlePaste(e: React.ClipboardEvent) {
     e.preventDefault()
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    const next = ['', '', '', '', '', '']
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 8)
+    const next = ['', '', '', '', '', '', '', '']
     pasted.split('').forEach((d, i) => { next[i] = d })
     setDigits(next)
-    const focusIndex = Math.min(pasted.length, 5)
+    const focusIndex = Math.min(pasted.length, 7)
     digitRefs.current[focusIndex]?.focus()
   }
 
