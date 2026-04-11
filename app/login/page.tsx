@@ -23,6 +23,10 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      console.log('URL repr:', JSON.stringify(url))
+      console.log('Key length:', key?.length, 'last char code:', key?.charCodeAt(key.length - 1))
       const { error } = await supabase.auth.signInWithOtp({ email })
       if (error) { setError(error.message); return }
       setStep('otp')
