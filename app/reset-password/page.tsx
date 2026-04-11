@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -9,16 +9,8 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [ready, setReady] = useState(false)
   const router = useRouter()
   const supabase = createClient()
-
-  useEffect(() => {
-    // Supabase setzt die Session automatisch aus dem URL-Hash
-    supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true)
-    })
-  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -30,16 +22,6 @@ export default function ResetPasswordPage() {
     setLoading(false)
     if (error) { setError(error.message); return }
     router.push('/login')
-  }
-
-  if (!ready) {
-    return (
-      <div className="flex items-center justify-center min-h-[80vh] px-4">
-        <div className="text-center">
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Link wird geprüft…</p>
-        </div>
-      </div>
-    )
   }
 
   return (

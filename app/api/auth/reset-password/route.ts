@@ -5,9 +5,10 @@ export async function POST(request: NextRequest) {
   const { email } = await request.json()
   if (!email) return NextResponse.json({ error: 'E-Mail fehlt' }, { status: 400 })
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002'
   const supabase = await createAdminClient()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002'}/reset-password`,
+    redirectTo: `${siteUrl}/api/auth/callback?next=/reset-password`,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
