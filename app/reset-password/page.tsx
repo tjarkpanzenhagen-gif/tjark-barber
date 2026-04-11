@@ -15,15 +15,21 @@ export default function ResetPasswordPage() {
   const supabase = useRef(createClient()).current
 
   useEffect(() => {
-    // Supabase liest den #access_token Hash automatisch aus der URL
-    // und feuert PASSWORD_RECOVERY sobald die Session gesetzt ist
+    // Fehler in der URL abfangen (z.B. otp_expired)
+    const params = new URLSearchParams(window.location.search)
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', ''))
+    if (params.get('error') || hashParams.get('error')) {
+      setError('Der Link ist abgelaufen. Bitte einen neuen anfordern.')
+      setReady(true)
+      return
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' && session) {
         setReady(true)
       }
     })
 
-    // Falls schon eine aktive Session besteht (z.B. bereits eingeloggt)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true)
     })
@@ -55,10 +61,24 @@ export default function ResetPasswordPage() {
         <div className="text-center">
           <div className="w-8 h-8 rounded-full border-2 animate-spin mx-auto mb-4"
             style={{ borderColor: 'var(--gold)', borderTopColor: 'transparent' }} />
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Link wird geprüft…</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !password) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] px-4">
+        <div className="w-full max-w-sm text-center">
+          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⏱️</div>
+          <h2 className="text-xl font-bold mb-2">Link abgelaufen</h2>
           <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
-            Link wird geprüft…
+            Der Reset-Link ist nicht mehr gültig.
           </p>
-          <Link href="/forgot-password" className="text-xs hover:underline" style={{ color: 'var(--text-muted)' }}>
+          <Link href="/forgot-password"
+            className="px-6 py-2.5 rounded-xl font-semibold text-black inline-block"
+            style={{ background: 'var(--gold)' }}>
             Neuen Link anfordern
           </Link>
         </div>
