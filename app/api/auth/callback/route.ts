@@ -6,16 +6,29 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type')
-  const next = searchParams.get('next') ?? '/'
 
   const supabase = await createClient()
 
   if (code) {
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) return NextResponse.redirect(`${origin}/login?error=link_invalid`)
   } else if (token_hash && type) {
-    // Password recovery & email confirmation via token hash
-    await supabase.auth.verifyOtp({ token_hash, type: type as 'recovery' | 'email' | 'signup' | 'magiclink' | 'invite' | 'email_change' })
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: type as 'recovery' | 'email' | 'signup' | 'magiclink' | 'invite' | 'email_change',
+    })
+    if (error) return NextResponse.redirect(`${origin}/login?error=link_invalid`)
+  } else {
+    return NextResponse.redirect(`${origin}/login?error=link_invalid`)
   }
 
-  return NextResponse.redirect(`${origin}${next}`)
+  // Check if new user (no name set yet)
+  const { data: { user } } = await supabase.auth.getUser()
+  const isNew = !user?.user_metadata?.full_name
+
+  if (isNew) {
+    return NextResponse.redirect(`${origin}/login?step=name`)
+  }
+
+  return NextResponse.redirect(`${origin}/book`)
 }

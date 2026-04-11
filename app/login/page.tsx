@@ -1,16 +1,28 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 type Step = 'email' | 'otp' | 'name'
 
 export default function LoginPage() {
-  const [step, setStep] = useState<Step>('email')
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const initialStep: Step = searchParams.get('step') === 'name' ? 'name' : 'email'
+  const initialError = searchParams.get('error') === 'link_invalid' ? 'Der Link ist ungültig oder abgelaufen. Bitte neu anmelden.' : ''
+
+  const [step, setStep] = useState<Step>(initialStep)
   const [email, setEmail] = useState('')
   const [digits, setDigits] = useState(['', '', '', '', '', ''])
   const [name, setName] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState(initialError)
   const [loading, setLoading] = useState(false)
   const digitRefs = useRef<(HTMLInputElement | null)[]>([])
   const router = useRouter()
