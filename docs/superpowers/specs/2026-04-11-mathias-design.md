@@ -21,7 +21,7 @@ Naturwerk Landschaftspflege ist ein deutsches Unternehmen für Baum- und Gartenp
 - **Framework:** Next.js 15 (App Router)
 - **Styling:** Tailwind CSS v4
 - **Icons:** Hugeicons
-- **Fonts:** Stardom (Fontshare) als Display-Font für Headlines; System-Serif als Fallback für Fließtext
+- **Fonts:** Author (Fontshare) — für Headlines und Fließtext (alles)
 - **Typ:** Single-Page Landingpage mit Smooth-Scroll-Navigation
 - **Backend:** Kein Backend nötig — reine statische Präsentationsseite
 
@@ -37,7 +37,7 @@ Naturwerk Landschaftspflege ist ein deutsches Unternehmen für Baum- und Gartenp
 ### 2. Hero
 - Fullscreen-Hintergrundbild (Natur/Bäume) mit warmem dunklen Overlay
 - Logo zentriert oder oben links
-- Firmenname in Stardom-Font, groß
+- Firmenname in Author-Font, groß
 - Tagline: "Natur mit Erfahrung pflegen"
 - Zwei CTA-Buttons: WhatsApp (Hugeicon) & Instagram (Hugeicon)
 - Sanfte Scroll-Indikator-Animation nach unten
@@ -92,9 +92,9 @@ Naturwerk Landschaftspflege ist ein deutsches Unternehmen für Baum- und Gartenp
 ```
 
 ### Typografie
-- **Display / Headlines:** Stardom (Fontshare) — für H1, H2, Sektionsnamen
-- **Body:** Georgia oder ähnlicher System-Serif — für Fließtext, Card-Beschreibungen
-- Fontsource-Import via `@font-face` von Fontshare CDN
+- **Alles:** Author (Fontshare) — für Headlines, Subheadings und Fließtext
+- Verschiedene Gewichte: Author Light (300) für Body, Author Regular (400) für Subtext, Author Bold (700) für Headlines
+- Import via Fontshare CDN (`@font-face`)
 
 ### Texturen & Atmosphäre
 - Leichte Papier-/Grain-Textur als Overlay auf Sektionen (CSS noise oder SVG-Filter)
