@@ -1,6 +1,8 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY || 'no-key')
+}
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@barbershop.de'
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@barbershop.de'
@@ -16,7 +18,7 @@ function formatTime(time: string) {
 }
 
 export async function sendBookingConfirmation(to: string, { date, time, name }: { date: string; time: string; name: string }) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `Terminbestätigung – ${formatDate(date)} um ${formatTime(time)}`,
@@ -37,7 +39,7 @@ export async function sendBookingConfirmation(to: string, { date, time, name }: 
 }
 
 export async function sendCancellationConfirmation(to: string, { date, time, name }: { date: string; time: string; name: string }) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `Terminstornierung – ${formatDate(date)} um ${formatTime(time)}`,
@@ -58,7 +60,7 @@ export async function sendCancellationConfirmation(to: string, { date, time, nam
 }
 
 export async function sendAdminNewBooking({ customerEmail, customerName, date, time }: { customerEmail: string; customerName: string; date: string; time: string }) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
     subject: `Neue Buchung – ${formatDate(date)} um ${formatTime(time)}`,
@@ -78,7 +80,7 @@ export async function sendAdminNewBooking({ customerEmail, customerName, date, t
 }
 
 export async function sendAdminCancellation({ customerEmail, customerName, date, time }: { customerEmail: string; customerName: string; date: string; time: string }) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
     subject: `Stornierung – ${formatDate(date)} um ${formatTime(time)}`,
@@ -104,7 +106,7 @@ export async function sendDailySummary(bookings: Array<{ name: string; time: str
     .map(b => `<tr><td style="padding:8px 12px;border-bottom:1px solid #333">${formatTime(b.time)} Uhr</td><td style="padding:8px 12px;border-bottom:1px solid #333">${b.name}</td><td style="padding:8px 12px;border-bottom:1px solid #333;color:#999">${b.email}</td></tr>`)
     .join('')
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
     subject: `Tagesübersicht für ${formatDate(date)} – ${bookings.length} Termin${bookings.length !== 1 ? 'e' : ''}`,
