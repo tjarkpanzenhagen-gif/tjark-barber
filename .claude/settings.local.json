@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(node -e ':*)",
+      "Bash(curl -s -X POST https://czgirufvicoqtgtcjgyx.supabase.co/auth/v1/signup -H 'apikey: sb_publishable_Rq4f4dd4lRrUUuVa20qXQ_aBw8qClS' -H 'Content-Type: application/json' -d '{\"email\":\"test@test.com\",\"password\":\"test123456\"}')",
+      "Bash(curl -s -X POST https://czgirufvicoqtgtcjgyx.supabase.co/auth/v1/signup -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6Z2lydWZ2aWNvcXRndGNqZ3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTM2NjYsImV4cCI6MjA5MTQ2OTY2Nn0.NLKrouOONWcDGqTMQUUL_mBxBdtEV0Vdpkpd3Fp0z-g' -H 'Content-Type: application/json' -d '{\"email\":\"test@test.com\",\"password\":\"test123456\"}')",
+      "Bash(timeout 6 cat \"C:\\\\Users\\\\Drest\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Drest-Desktop-barbershop\\\\6e5cb274-6bf5-4859-be70-919eadc26f0b\\\\tasks\\\\bxsbje17x.output\")"
+    ]
+  }
+}
