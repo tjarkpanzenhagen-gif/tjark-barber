@@ -1,9 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -12,19 +11,19 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = useRef(createClient()).current
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
-        setError('E-Mail oder Passwort falsch.')
-        setPassword('')
-        return
-      }
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Fehler'); setPassword(''); return }
       router.push('/book')
       router.refresh()
     } catch {
@@ -47,15 +46,10 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label className="block text-sm mb-1.5" style={{ color: 'var(--text-muted)' }}>E-Mail</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
               className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              placeholder="deine@email.de"
-            />
+              placeholder="deine@email.de" />
           </div>
 
           <div>
@@ -65,37 +59,25 @@ export default function LoginPage() {
                 Vergessen?
               </Link>
             </div>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
               className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              placeholder="••••••••"
-            />
+              placeholder="••••••••" />
           </div>
 
-          {/* Remember me */}
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <div className="relative w-4 h-4 flex-shrink-0">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={e => setRemember(e.target.checked)}
-                className="sr-only"
-              />
-              <div className="w-4 h-4 rounded flex items-center justify-center"
-                style={{
-                  background: remember ? 'var(--gold)' : 'var(--surface2)',
-                  border: `1px solid ${remember ? 'var(--gold)' : 'var(--border)'}`,
-                }}>
-                {remember && (
-                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                    <path d="M1 4l3 3 5-6" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
+            <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+              onClick={() => setRemember(r => !r)}
+              style={{
+                background: remember ? 'var(--gold)' : 'var(--surface2)',
+                border: `1px solid ${remember ? 'var(--gold)' : 'var(--border)'}`,
+                cursor: 'pointer',
+              }}>
+              {remember && (
+                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                  <path d="M1 4l3 3 5-6" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
             </div>
             <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Angemeldet bleiben</span>
           </label>
@@ -106,9 +88,7 @@ export default function LoginPage() {
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
+          <button type="submit" disabled={loading}
             className="w-full py-2.5 rounded-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
             style={{ background: 'var(--gold)' }}>
             {loading ? 'Anmelden…' : 'Anmelden'}
@@ -117,9 +97,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm mt-6" style={{ color: 'var(--text-muted)' }}>
           Noch kein Konto?{' '}
-          <Link href="/register" style={{ color: 'var(--gold)' }} className="hover:underline">
-            Registrieren
-          </Link>
+          <Link href="/register" style={{ color: 'var(--gold)' }} className="hover:underline">Registrieren</Link>
         </p>
       </div>
     </div>
