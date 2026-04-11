@@ -14,8 +14,9 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const digitRefs = useRef<(HTMLInputElement | null)[]>([])
+  const supabaseRef = useRef(createClient())
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = supabaseRef.current
 
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault()
