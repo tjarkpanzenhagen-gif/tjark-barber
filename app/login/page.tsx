@@ -22,13 +22,15 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
-    })
-    setLoading(false)
-    if (error) { setError(error.message); return }
-    setStep('otp')
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email })
+      if (error) { setError(error.message); return }
+      setStep('otp')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function verifyOtp(e: React.FormEvent) {
