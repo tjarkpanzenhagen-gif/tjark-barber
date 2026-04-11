@@ -29,18 +29,11 @@ export default async function HomePage() {
               </Link>
             </>
           ) : (
-            <>
-              <Link href="/register"
-                className="px-6 py-2.5 rounded-xl font-semibold text-black"
-                style={{ background: 'var(--gold)' }}>
-                Registrieren
-              </Link>
-              <Link href="/login"
-                className="px-6 py-2.5 rounded-xl font-medium"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}>
-                Anmelden
-              </Link>
-            </>
+            <Link href="/login"
+              className="px-6 py-2.5 rounded-xl font-semibold text-black"
+              style={{ background: 'var(--gold)' }}>
+              Anmelden
+            </Link>
           )}
         </div>
       </div>

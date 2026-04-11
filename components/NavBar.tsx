@@ -67,14 +67,7 @@ export function NavBar() {
               </button>
             </>
           ) : (
-            <>
-              <NavLink href="/login" style={linkStyle('/login')}>Anmelden</NavLink>
-              <Link href="/register"
-                className="ml-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
-                style={{ background: 'var(--gold)', color: '#000' }}>
-                Registrieren
-              </Link>
-            </>
+            <NavLink href="/login" style={linkStyle('/login')}>Anmelden</NavLink>
           )}
         </div>
 
@@ -116,7 +109,6 @@ export function NavBar() {
           ) : (
             <>
               <MobileLink href="/login">Anmelden</MobileLink>
-              <MobileLink href="/register" gold>Registrieren</MobileLink>
             </>
           )}
         </div>
