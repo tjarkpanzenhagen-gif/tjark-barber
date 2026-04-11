@@ -15,26 +15,47 @@ export default function ResetPasswordPage() {
   const supabase = useRef(createClient()).current
 
   useEffect(() => {
-    // Fehler in der URL abfangen (z.B. otp_expired)
-    const params = new URLSearchParams(window.location.search)
-    const hashParams = new URLSearchParams(window.location.hash.replace('#', ''))
-    if (params.get('error') || hashParams.get('error')) {
-      setError('Der Link ist abgelaufen. Bitte einen neuen anfordern.')
+    async function init() {
+      const params = new URLSearchParams(window.location.search)
+      const hashParams = new URLSearchParams(window.location.hash.replace('#', ''))
+
+      // Fehler von Supabase abfangen
+      if (params.get('error') || hashParams.get('error')) {
+        setError('expired')
+        setReady(true)
+        return
+      }
+
+      // PKCE Flow: ?code= Parameter → eintauschen
+      const code = params.get('code')
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) { setError('expired'); setReady(true); return }
+        setReady(true)
+        return
+      }
+
+      // Implicit Flow: #access_token im Hash
+      if (hashParams.get('access_token')) {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && session) {
+            setReady(true)
+            subscription.unsubscribe()
+          }
+        })
+        return
+      }
+
+      // Bestehende Session prüfen
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) { setReady(true); return }
+
+      // Kein Token gefunden
+      setError('expired')
       setReady(true)
-      return
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' && session) {
-        setReady(true)
-      }
-    })
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true)
-    })
-
-    return () => subscription.unsubscribe()
+    init()
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -67,7 +88,7 @@ export default function ResetPasswordPage() {
     )
   }
 
-  if (error && !password) {
+  if (error === 'expired') {
     return (
       <div className="flex items-center justify-center min-h-[80vh] px-4">
         <div className="w-full max-w-sm text-center">
