@@ -1,9 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import type { User } from '@supabase/supabase-js'
+import { useEffect, useState } from 'react'
 import {
   format, addMonths, subMonths,
   startOfMonth, endOfMonth, eachDayOfInterval,
@@ -25,8 +22,6 @@ const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const fmt = (t: string) => t.slice(0, 5)
 
 export default function BookPage() {
-  const supabaseRef = useRef(createClient())
-  const [user, setUser] = useState<User | null>(null)
   const [name, setName] = useState('')
   const [month, setMonth] = useState(new Date())
   const [availableDays, setAvailableDays] = useState<AvailableDay[]>([])
@@ -37,14 +32,8 @@ export default function BookPage() {
   const [booking, setBooking] = useState(false)
   const [success, setSuccess] = useState<{ date: string; time: string } | null>(null)
   const [error, setError] = useState('')
-  const router = useRouter()
 
   useEffect(() => {
-    supabaseRef.current.auth.getUser().then(({ data }) => {
-      if (!data.user) { router.push('/login'); return }
-      setUser(data.user)
-      setName(data.user.user_metadata?.full_name || '')
-    })
     fetch('/api/available-days').then(r => r.json()).then(d => setAvailableDays(Array.isArray(d) ? d : []))
   }, [])
 
@@ -87,21 +76,15 @@ export default function BookPage() {
             </p>
             <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold)' }}>{fmt(success.time)} Uhr</p>
           </div>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px' }}>
-            Bestätigung wurde per E-Mail gesendet. Stornierung bis 2h vorher möglich.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button onClick={() => { setSuccess(null); setSelectedDate(null); setSelectedSlot(null); fetch('/api/available-days').then(r => r.json()).then(d => setAvailableDays(Array.isArray(d) ? d : [])) }}
-              className="px-5 py-2.5 rounded-xl font-medium text-black"
-              style={{ background: 'var(--gold)' }}>
-              Weiterer Termin
-            </button>
-            <button onClick={() => router.push('/dashboard')}
-              className="px-5 py-2.5 rounded-xl font-medium"
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              Meine Termine
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              setSuccess(null); setSelectedDate(null); setSelectedSlot(null)
+              fetch('/api/available-days').then(r => r.json()).then(d => setAvailableDays(Array.isArray(d) ? d : []))
+            }}
+            className="px-5 py-2.5 rounded-xl font-medium text-black"
+            style={{ background: 'var(--gold)' }}>
+            Weiterer Termin
+          </button>
         </div>
       </div>
     )
@@ -114,7 +97,6 @@ export default function BookPage() {
         Wähle einen verfügbaren Tag und Uhrzeit.
       </p>
 
-      {/* Step 1: Name */}
       <Step n={1} label="Dein Name" done={!!name.trim()}>
         <input
           type="text"
@@ -126,32 +108,22 @@ export default function BookPage() {
         />
       </Step>
 
-      {/* Step 2: Date */}
       <Step n={2} label="Datum wählen" done={!!selectedDate}>
         <div className="rounded-xl p-4" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-          {/* Month navigation */}
           <div className="flex items-center justify-between mb-4">
             <button onClick={() => setMonth(m => subMonths(m, 1))}
               className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-70"
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              ‹
-            </button>
-            <span style={{ fontWeight: 600 }}>
-              {format(month, 'MMMM yyyy', { locale: de })}
-            </span>
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>‹</button>
+            <span style={{ fontWeight: 600 }}>{format(month, 'MMMM yyyy', { locale: de })}</span>
             <button onClick={() => setMonth(m => addMonths(m, 1))}
               className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-70"
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              ›
-            </button>
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>›</button>
           </div>
-
           <div className="grid grid-cols-7 mb-1">
             {WEEKDAYS.map(d => (
               <div key={d} className="text-center py-1" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{d}</div>
             ))}
           </div>
-
           <div className="grid grid-cols-7 gap-1">
             {Array.from({ length: pad }).map((_, i) => <div key={`p${i}`} />)}
             {days.map(day => {
@@ -161,7 +133,6 @@ export default function BookPage() {
               const inM = isSameMonth(day, month)
               const sel = selectedDate === ds
               const clickable = avail && !past && inM
-
               return (
                 <button key={ds} disabled={!clickable} onClick={() => setSelectedDate(sel ? null : ds)}
                   className="aspect-square rounded-lg text-sm font-medium transition-all flex items-center justify-center"
@@ -177,7 +148,6 @@ export default function BookPage() {
               )
             })}
           </div>
-
           <div className="flex items-center gap-4 mt-4" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded" style={{ background: 'rgba(212,168,83,0.3)' }} />Verfügbar
@@ -189,7 +159,6 @@ export default function BookPage() {
         </div>
       </Step>
 
-      {/* Step 3: Time slot */}
       {selectedDate && (
         <Step n={3} label={`Uhrzeit – ${format(new Date(selectedDate + 'T12:00:00'), 'EEEE, d. MMMM', { locale: de })}`} done={!!selectedSlot}>
           {loadingSlots ? (
@@ -207,7 +176,7 @@ export default function BookPage() {
                     style={{
                       background: sel ? 'var(--gold)' : taken ? 'var(--surface)' : 'var(--surface2)',
                       color: sel ? '#000' : taken ? 'var(--border)' : 'var(--text)',
-                      border: `1px solid ${sel ? 'var(--gold)' : taken ? 'var(--border)' : 'var(--border)'}`,
+                      border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
                       cursor: taken ? 'not-allowed' : 'pointer',
                       textDecoration: taken ? 'line-through' : 'none',
                       opacity: taken ? 0.5 : 1,
@@ -221,7 +190,6 @@ export default function BookPage() {
         </Step>
       )}
 
-      {/* Confirm */}
       {selectedDate && selectedSlot && (
         <div className="rounded-2xl p-5 mt-2" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <h3 style={{ fontWeight: 600, marginBottom: '12px', fontSize: '15px' }}>Zusammenfassung</h3>
@@ -232,21 +200,17 @@ export default function BookPage() {
             </span></p>
             <p>🕐 <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '1.1rem' }}>{fmt(selectedSlot)} Uhr</span></p>
           </div>
-
           {error && (
-            <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#1a0a0a', border: '1px solid #5a1a1a', color: '#ff7070', fontSize: '14px' }}>
+            <div className="rounded-xl px-4 py-3 mb-4"
+              style={{ background: '#1a0a0a', border: '1px solid #5a1a1a', color: '#ff7070', fontSize: '14px' }}>
               {error}
             </div>
           )}
-
           <button onClick={handleBook} disabled={booking || !name.trim()}
             className="w-full py-3.5 rounded-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
             style={{ background: 'var(--gold)', fontSize: '1rem' }}>
             {booking ? 'Buchung wird erstellt…' : 'Verbindlich buchen'}
           </button>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px' }}>
-            Stornierung bis 2 Stunden vor dem Termin möglich
-          </p>
         </div>
       )}
     </div>
