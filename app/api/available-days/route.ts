@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { isAdminEmail } from '@/lib/admin'
+import { createAdminClient } from '@/lib/supabase/server'
+import { isAdminAuthed } from '@/lib/admin-auth'
 
-// GET /api/available-days — list all available days
+// GET — public
 export async function GET() {
-  const supabase = await createClient()
-  const { data, error } = await supabase
+  const admin = await createAdminClient()
+  const { data, error } = await admin
     .from('available_days')
     .select('*')
     .gte('date', new Date().toISOString().split('T')[0])
@@ -15,20 +15,13 @@ export async function GET() {
   return NextResponse.json(data)
 }
 
-// POST /api/available-days — admin creates/updates a day
+// POST — admin only
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !isAdminEmail(user.email)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-  }
+  if (!await isAdminAuthed()) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
   const body = await request.json()
   const { date, start_time, end_time, is_available } = body
-
-  if (!date || !start_time || !end_time) {
-    return NextResponse.json({ error: 'Fehlende Felder' }, { status: 400 })
-  }
+  if (!date || !start_time || !end_time) return NextResponse.json({ error: 'Fehlende Felder' }, { status: 400 })
 
   const admin = await createAdminClient()
   const { data, error } = await admin
