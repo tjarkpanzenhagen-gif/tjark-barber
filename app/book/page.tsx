@@ -178,12 +178,12 @@ export default function BookPage() {
                   <button key={slot.time} disabled={unavailable} onClick={() => setSelectedSlot(s => s === slot.time ? null : slot.time)}
                     className="py-2.5 rounded-xl text-sm font-medium transition-all"
                     style={{
-                      background: sel ? 'var(--gold)' : isBooked ? 'rgba(220,60,60,0.15)' : isTooFar ? 'rgba(60,120,220,0.12)' : 'var(--surface2)',
-                      color: sel ? '#000' : isBooked ? '#e05555' : isTooFar ? '#5588dd' : 'var(--text)',
-                      border: `1px solid ${sel ? 'var(--gold)' : isBooked ? 'rgba(220,60,60,0.4)' : isTooFar ? 'rgba(60,120,220,0.35)' : 'var(--border)'}`,
+                      background: sel ? 'var(--gold)' : isBooked ? 'rgba(200,40,40,0.35)' : isTooFar ? 'rgba(50,100,220,0.28)' : 'var(--surface2)',
+                      color: sel ? '#000' : isBooked ? '#ff7070' : isTooFar ? '#7aabff' : 'var(--text)',
+                      border: `1px solid ${sel ? 'var(--gold)' : isBooked ? 'rgba(200,40,40,0.7)' : isTooFar ? 'rgba(50,100,220,0.6)' : 'var(--border)'}`,
                       cursor: unavailable ? 'not-allowed' : 'pointer',
                       filter: unavailable ? 'blur(1.5px)' : 'none',
-                      opacity: unavailable ? 0.45 : 1,
+                      opacity: unavailable ? 0.55 : 1,
                       pointerEvents: unavailable ? 'none' : 'auto',
                     }}>
                     {fmt(slot.time)}
