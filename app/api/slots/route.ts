@@ -43,7 +43,20 @@ export async function GET(request: NextRequest) {
     .eq('status', 'active')
 
   const booked = new Set(bookings?.map(b => b.time) ?? [])
-  const slots = allSlots.map(time => ({ time, available: !booked.has(time) }))
+
+  // Each booking blocks the next 30-min slot too (haircut takes ~1h)
+  function isBlocked(time: string): boolean {
+    if (booked.has(time)) return true
+    const [h, m] = time.split(':').map(Number)
+    const prevMins = h * 60 + m - 30
+    if (prevMins >= 0) {
+      const prev = `${Math.floor(prevMins / 60).toString().padStart(2, '0')}:${(prevMins % 60).toString().padStart(2, '0')}:00`
+      if (booked.has(prev)) return true
+    }
+    return false
+  }
+
+  const slots = allSlots.map(time => ({ time, available: !isBlocked(time) }))
 
   return NextResponse.json({ slots, start_time: day.start_time, end_time: day.end_time })
 }
