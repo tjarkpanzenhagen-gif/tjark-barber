@@ -1,48 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
-import { useEffect, useState, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import type { User } from '@supabase/supabase-js'
+import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 
 export function NavBar() {
-  const [user, setUser] = useState<User | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const supabaseRef = useRef(createClient())
-  const router = useRouter()
   const pathname = usePathname()
-
-  useEffect(() => {
-    const supabase = supabaseRef.current
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
-      checkAdmin(data.user?.email)
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null)
-      checkAdmin(session?.user?.email)
-    })
-    return () => subscription.unsubscribe()
-  }, [])
-
-  function checkAdmin(email?: string | null) {
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || ''
-    setIsAdmin(!!email && !!adminEmail && email.toLowerCase() === adminEmail.toLowerCase())
-  }
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => setMenuOpen(false), [pathname])
-
-  async function handleLogout() {
-    await supabaseRef.current.auth.signOut()
-    router.push('/')
-    router.refresh()
-  }
-
-  const linkStyle = (path: string) => ({
-    color: pathname === path || pathname.startsWith(path + '/') ? 'var(--gold)' : 'var(--text)',
-  })
 
   return (
     <nav style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
@@ -55,20 +21,11 @@ export function NavBar() {
 
         {/* Desktop */}
         <div className="hidden sm:flex items-center gap-1">
-          {user ? (
-            <>
-              <NavLink href="/book" style={linkStyle('/book')}>Buchen</NavLink>
-              <NavLink href="/dashboard" style={linkStyle('/dashboard')}>Meine Termine</NavLink>
-              {isAdmin && <NavLink href="/admin" style={linkStyle('/admin')}>Admin</NavLink>}
-              <button onClick={handleLogout}
-                className="ml-2 px-3 py-1.5 rounded-lg text-sm transition-opacity hover:opacity-70"
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                Abmelden
-              </button>
-            </>
-          ) : (
-            <NavLink href="/login" style={linkStyle('/login')}>Anmelden</NavLink>
-          )}
+          <Link href="/book"
+            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-opacity hover:opacity-70"
+            style={{ color: pathname === '/book' ? 'var(--gold)' : 'var(--text)' }}>
+            Buchen
+          </Link>
         </div>
 
         {/* Mobile hamburger */}
@@ -92,47 +49,16 @@ export function NavBar() {
         </button>
       </div>
 
-      {/* Mobile dropdown */}
       {menuOpen && (
         <div className="sm:hidden border-t px-4 py-3 flex flex-col gap-1"
           style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
-          {user ? (
-            <>
-              <MobileLink href="/book">Buchen</MobileLink>
-              <MobileLink href="/dashboard">Meine Termine</MobileLink>
-              {isAdmin && <MobileLink href="/admin">Admin</MobileLink>}
-              <button onClick={handleLogout} className="text-left px-3 py-2.5 rounded-lg text-sm mt-1"
-                style={{ color: 'var(--text-muted)' }}>
-                Abmelden
-              </button>
-            </>
-          ) : (
-            <>
-              <MobileLink href="/login">Anmelden</MobileLink>
-            </>
-          )}
+          <Link href="/book"
+            className="px-3 py-2.5 rounded-lg text-sm font-medium"
+            style={{ color: 'var(--text)' }}>
+            Buchen
+          </Link>
         </div>
       )}
     </nav>
-  )
-}
-
-function NavLink({ href, children, style }: { href: string; children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <Link href={href}
-      className="px-3 py-1.5 rounded-lg text-sm font-medium transition-opacity hover:opacity-70"
-      style={style}>
-      {children}
-    </Link>
-  )
-}
-
-function MobileLink({ href, children, gold }: { href: string; children: React.ReactNode; gold?: boolean }) {
-  return (
-    <Link href={href}
-      className="px-3 py-2.5 rounded-lg text-sm font-medium"
-      style={{ color: gold ? 'var(--gold)' : 'var(--text)' }}>
-      {children}
-    </Link>
   )
 }
