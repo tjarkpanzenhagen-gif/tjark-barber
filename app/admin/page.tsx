@@ -116,9 +116,10 @@ export default function AdminPage() {
   async function cancelBooking(id: string) {
     if (!confirm('Buchung stornieren?')) return
     setCancelling(id)
-    await fetch(`/api/bookings/${id}`, { method: 'PATCH' })
+    const res = await fetch(`/api/bookings/${id}`, { method: 'PATCH' })
     setCancelling(null)
-    loadBookings()
+    if (res.ok) { showToast('Buchung storniert'); loadBookings() }
+    else { const d = await res.json().catch(() => ({})); showToast(d.error || 'Stornierung fehlgeschlagen', false) }
   }
 
   if (authed === null) {

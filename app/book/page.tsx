@@ -61,7 +61,14 @@ export default function BookPage() {
     })
     const data = await res.json()
     setBooking(false)
-    if (!res.ok) { setError(data.error || 'Fehler beim Buchen'); return }
+    if (!res.ok) {
+      setError(data.error || 'Fehler beim Buchen')
+      // Refresh slots so stale availability gets corrected
+      fetch(`/api/slots?date=${selectedDate}`)
+        .then(r => r.json())
+        .then(d => { setSlots(d.slots || []); setSelectedSlot(null) })
+      return
+    }
     setSuccess({ date: selectedDate, time: selectedSlot })
   }
 
