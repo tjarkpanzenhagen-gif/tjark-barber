@@ -1,8 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 import {
   format, addMonths, subMonths,
   startOfMonth, endOfMonth, eachDayOfInterval,
@@ -24,13 +22,15 @@ const fmt = (t: string) => t.slice(0, 5)
 function slotCount(start: string, end: string) {
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
-  const diff = (eh * 60 + em) - (sh * 60 + sm)
-  return diff > 0 ? Math.floor(diff / 30) : 0
+  return Math.max(0, Math.floor(((eh * 60 + em) - (sh * 60 + sm)) / 30))
 }
 
 export default function AdminPage() {
-  const supabaseRef = useRef(createClient())
-  const [authed, setAuthed] = useState(false)
+  const [authed, setAuthed] = useState<boolean | null>(null)
+  const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+
   const [tab, setTab] = useState<'calendar' | 'bookings'>('calendar')
   const [month, setMonth] = useState(new Date())
   const [days, setDays] = useState<AvailableDay[]>([])
@@ -41,22 +41,26 @@ export default function AdminPage() {
   const [cancelling, setCancelling] = useState<string | null>(null)
   const [filterDate, setFilterDate] = useState('')
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
-  const router = useRouter()
 
   useEffect(() => {
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || ''
-    supabaseRef.current.auth.getUser().then(({ data }) => {
-      const email = data.user?.email?.toLowerCase() || ''
-      if (!data.user || !adminEmail || email !== adminEmail.toLowerCase()) {
-        router.replace('/')
-        return
-      }
-      setAuthed(true)
-    })
+    fetch('/api/auth/admin').then(r => setAuthed(r.ok))
   }, [])
 
   useEffect(() => { if (authed) { loadDays(); loadBookings() } }, [authed])
   useEffect(() => { if (authed) loadBookings() }, [filterDate])
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setLoginError(''); setLoginLoading(true)
+    const res = await fetch('/api/auth/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    })
+    setLoginLoading(false)
+    if (res.ok) { setAuthed(true) }
+    else { const d = await res.json(); setLoginError(d.error || 'Falsches Passwort') }
+  }
 
   async function loadDays() {
     const res = await fetch('/api/available-days')
@@ -117,6 +121,50 @@ export default function AdminPage() {
     loadBookings()
   }
 
+  if (authed === null) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh]">
+        <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Lade…</div>
+      </div>
+    )
+  }
+
+  if (!authed) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold">Admin</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Passwort eingeben</p>
+          </div>
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              autoFocus
+              placeholder="Passwort"
+              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            />
+            {loginError && (
+              <p className="text-sm px-3 py-2 rounded-xl"
+                style={{ background: '#1a0a0a', color: '#ff7070', border: '1px solid #5a1a1a' }}>
+                {loginError}
+              </p>
+            )}
+            <button type="submit" disabled={loginLoading}
+              className="w-full py-2.5 rounded-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ background: 'var(--gold)' }}>
+              {loginLoading ? 'Prüfe…' : 'Einloggen'}
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
   const availableSet = new Set(days.filter(d => d.is_available).map(d => d.date))
   const blockedSet = new Set(days.filter(d => !d.is_available).map(d => d.date))
   const calDays = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) })
@@ -124,17 +172,8 @@ export default function AdminPage() {
   const activeBookings = bookings.filter(b => b.status === 'active')
   const cancelledBookings = bookings.filter(b => b.status === 'cancelled')
 
-  if (!authed) {
-    return (
-      <div className="flex items-center justify-center min-h-[80vh]">
-        <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Prüfe Berechtigung…</div>
-      </div>
-    )
-  }
-
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Toast */}
       {toast && (
         <div className="fixed top-16 right-4 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
           style={{
@@ -165,10 +204,8 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* ── CALENDAR TAB ── */}
       {tab === 'calendar' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Calendar picker */}
           <div className="rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
             <div className="flex items-center justify-between mb-4">
               <button onClick={() => setMonth(m => subMonths(m, 1))}
@@ -179,13 +216,11 @@ export default function AdminPage() {
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-70"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>›</button>
             </div>
-
             <div className="grid grid-cols-7 mb-1">
               {WEEKDAYS.map(d => (
                 <div key={d} className="text-center py-1" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{d}</div>
               ))}
             </div>
-
             <div className="grid grid-cols-7 gap-1">
               {Array.from({ length: pad }).map((_, i) => <div key={`p${i}`} />)}
               {calDays.map(day => {
@@ -209,7 +244,6 @@ export default function AdminPage() {
                 )
               })}
             </div>
-
             <div className="flex flex-wrap gap-3 mt-4" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               <span className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded" style={{ background: '#0f2a0f', border: '1px solid #2a5a2a' }} />Freigegeben
@@ -220,7 +254,6 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Day config form */}
           <div className="rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
             {!selectedDate ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-12">
@@ -235,8 +268,6 @@ export default function AdminPage() {
                 <h2 style={{ fontWeight: 700, marginBottom: '20px', fontSize: '1.1rem' }}>
                   {format(new Date(selectedDate + 'T12:00:00'), 'EEEE, d. MMMM yyyy', { locale: de })}
                 </h2>
-
-                {/* Toggle */}
                 <label className="flex items-center gap-3 cursor-pointer mb-5">
                   <div className="relative" onClick={() => setForm(f => ({ ...f, is_available: !f.is_available }))}>
                     <div className="w-11 h-6 rounded-full transition-colors"
@@ -246,13 +277,8 @@ export default function AdminPage() {
                   </div>
                   <span style={{ fontWeight: 500 }}>{form.is_available ? 'Tag freigegeben' : 'Tag gesperrt'}</span>
                 </label>
-
-                {/* Time inputs */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                  {[
-                    { label: 'Öffnet', key: 'start_time' },
-                    { label: 'Schließt', key: 'end_time' },
-                  ].map(({ label, key }) => (
+                  {[{ label: 'Öffnet', key: 'start_time' }, { label: 'Schließt', key: 'end_time' }].map(({ label, key }) => (
                     <div key={key}>
                       <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>{label}</label>
                       <input type="time"
@@ -263,12 +289,9 @@ export default function AdminPage() {
                     </div>
                   ))}
                 </div>
-
                 <div className="rounded-lg px-3 py-2 mb-5" style={{ background: 'var(--surface2)', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  {slotCount(form.start_time, form.end_time)} Slots à 30 Min ·{' '}
-                  {fmt(form.start_time)} – {fmt(form.end_time)} Uhr
+                  {slotCount(form.start_time, form.end_time)} Slots à 30 Min · {fmt(form.start_time)} – {fmt(form.end_time)} Uhr
                 </div>
-
                 <div className="flex gap-2">
                   <button onClick={saveDay} disabled={saving}
                     className="flex-1 py-2.5 rounded-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
@@ -289,10 +312,8 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── BOOKINGS TAB ── */}
       {tab === 'bookings' && (
         <div>
-          {/* Filter */}
           <div className="flex flex-wrap gap-3 items-end mb-6">
             <div>
               <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
@@ -335,10 +356,7 @@ export default function AdminPage() {
                             </p>
                             <p style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--gold)' }}>{fmt(b.time)}</p>
                           </div>
-                          <div>
-                            <p style={{ fontWeight: 600 }}>{b.customer_name}</p>
-                            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{b.customer_email}</p>
-                          </div>
+                          <p style={{ fontWeight: 600 }}>{b.customer_name}</p>
                         </div>
                         <button onClick={() => cancelBooking(b.id)} disabled={cancelling === b.id}
                           className="px-4 py-2 rounded-xl text-sm hover:opacity-70 transition-opacity disabled:opacity-40 whitespace-nowrap"
@@ -350,7 +368,6 @@ export default function AdminPage() {
                   </div>
                 </section>
               )}
-
               {cancelledBookings.length > 0 && (
                 <section>
                   <h2 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: '12px' }}>
