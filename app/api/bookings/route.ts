@@ -47,15 +47,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Zeitslot außerhalb der Öffnungszeiten' }, { status: 400 })
   }
 
-  const { data: existing } = await admin
+  const { data: existingBookings } = await admin
     .from('bookings')
-    .select('id')
+    .select('time')
     .eq('date', date)
-    .eq('time', time)
     .eq('status', 'active')
-    .single()
 
-  if (existing) return NextResponse.json({ error: 'Zeitslot bereits belegt' }, { status: 409 })
+  const bookedTimes = existingBookings?.map(b => b.time) ?? []
+
+  if (bookedTimes.includes(time)) {
+    return NextResponse.json({ error: 'Zeitslot bereits belegt' }, { status: 409 })
+  }
+
+  // Enforce max 30-min gap from last booking
+  if (bookedTimes.length > 0) {
+    const lastMins = Math.max(...bookedTimes.map(t => {
+      const [h, m] = t.split(':').map(Number)
+      return h * 60 + m
+    }))
+    const [th, tm] = time.split(':').map(Number)
+    const reqMins = th * 60 + tm
+    if (reqMins > lastMins + 30) {
+      return NextResponse.json({ error: 'Zeitslot zu weit von letzter Buchung entfernt' }, { status: 400 })
+    }
+  }
 
   const { data: booking, error } = await admin
     .from('bookings')

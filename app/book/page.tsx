@@ -175,12 +175,13 @@ export default function BookPage() {
                   <button key={slot.time} disabled={taken} onClick={() => setSelectedSlot(s => s === slot.time ? null : slot.time)}
                     className="py-2.5 rounded-xl text-sm font-medium transition-all"
                     style={{
-                      background: sel ? 'var(--gold)' : taken ? 'var(--surface)' : 'var(--surface2)',
-                      color: sel ? '#000' : taken ? 'var(--border)' : 'var(--text)',
+                      background: sel ? 'var(--gold)' : 'var(--surface2)',
+                      color: sel ? '#000' : 'var(--text)',
                       border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
                       cursor: taken ? 'not-allowed' : 'pointer',
-                      textDecoration: taken ? 'line-through' : 'none',
-                      opacity: taken ? 0.5 : 1,
+                      filter: taken ? 'blur(2px)' : 'none',
+                      opacity: taken ? 0.35 : 1,
+                      pointerEvents: taken ? 'none' : 'auto',
                     }}>
                     {fmt(slot.time)}
                   </button>
