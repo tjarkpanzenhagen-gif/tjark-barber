@@ -43,21 +43,10 @@ export async function GET(request: NextRequest) {
     .eq('status', 'active')
 
   const bookedTimes = bookings?.map(b => b.time) ?? []
-  const booked = new Set(bookedTimes)
+  const blocked = new Set<string>(bookedTimes)
 
-  // Each booking blocks itself + the next 30-min slot (haircut = 1h)
-  const blocked = new Set<string>()
-  for (const t of bookedTimes) {
-    blocked.add(t)
-    const [h, m] = t.split(':').map(Number)
-    const nextMins = h * 60 + m + 30
-    const nh = Math.floor(nextMins / 60).toString().padStart(2, '0')
-    const nm = (nextMins % 60).toString().padStart(2, '0')
-    blocked.add(`${nh}:${nm}:00`)
-  }
-
-  // If there are existing bookings, only show slots within 60 min of the last booking
-  // (prevents 3-hour gaps where the barber would just be waiting)
+  // If there are existing bookings, only show slots within 30 min of the last booking
+  // (haircut = 30 min, prevents gaps where the barber would just be waiting)
   const lastBookingMins = bookedTimes.length > 0
     ? Math.max(...bookedTimes.map(t => { const [h, m] = t.split(':').map(Number); return h * 60 + m }))
     : null
@@ -67,7 +56,7 @@ export async function GET(request: NextRequest) {
     if (lastBookingMins !== null) {
       const [h, m] = time.split(':').map(Number)
       const tMins = h * 60 + m
-      if (tMins > lastBookingMins + 60) return { time, available: false }
+      if (tMins > lastBookingMins + 30) return { time, available: false }
     }
     return { time, available: true }
   })
