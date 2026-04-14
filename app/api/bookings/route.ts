@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }))
     const [th, tm] = time.split(':').map(Number)
     const reqMins = th * 60 + tm
-    if (reqMins > lastMins + 30) {
+    if (reqMins > lastMins + 60) {
       return NextResponse.json({ error: 'Zeitslot zu weit von letzter Buchung entfernt' }, { status: 400 })
     }
   }

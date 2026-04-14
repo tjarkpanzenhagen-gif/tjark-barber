@@ -16,7 +16,7 @@ interface AvailableDay {
   is_available: boolean
 }
 
-interface Slot { time: string; available: boolean }
+interface Slot { time: string; available: boolean; status: 'available' | 'booked' | 'too-far' }
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const fmt = (t: string) => t.slice(0, 5)
@@ -167,27 +167,45 @@ export default function BookPage() {
           ) : slots.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Keine Zeitslots verfügbar.</div>
           ) : (
+            <>
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
               {slots.map(slot => {
-                const taken = !slot.available
                 const sel = selectedSlot === slot.time
+                const isBooked = slot.status === 'booked'
+                const isTooFar = slot.status === 'too-far'
+                const unavailable = isBooked || isTooFar
                 return (
-                  <button key={slot.time} disabled={taken} onClick={() => setSelectedSlot(s => s === slot.time ? null : slot.time)}
+                  <button key={slot.time} disabled={unavailable} onClick={() => setSelectedSlot(s => s === slot.time ? null : slot.time)}
                     className="py-2.5 rounded-xl text-sm font-medium transition-all"
                     style={{
-                      background: sel ? 'var(--gold)' : 'var(--surface2)',
-                      color: sel ? '#000' : 'var(--text)',
-                      border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
-                      cursor: taken ? 'not-allowed' : 'pointer',
-                      filter: taken ? 'blur(2px)' : 'none',
-                      opacity: taken ? 0.35 : 1,
-                      pointerEvents: taken ? 'none' : 'auto',
+                      background: sel ? 'var(--gold)' : isBooked ? 'rgba(220,60,60,0.15)' : isTooFar ? 'rgba(60,120,220,0.12)' : 'var(--surface2)',
+                      color: sel ? '#000' : isBooked ? '#e05555' : isTooFar ? '#5588dd' : 'var(--text)',
+                      border: `1px solid ${sel ? 'var(--gold)' : isBooked ? 'rgba(220,60,60,0.4)' : isTooFar ? 'rgba(60,120,220,0.35)' : 'var(--border)'}`,
+                      cursor: unavailable ? 'not-allowed' : 'pointer',
+                      filter: unavailable ? 'blur(1.5px)' : 'none',
+                      opacity: unavailable ? 0.45 : 1,
+                      pointerEvents: unavailable ? 'none' : 'auto',
                     }}>
                     {fmt(slot.time)}
                   </button>
                 )
               })}
             </div>
+            <div className="flex flex-wrap items-center gap-4 mt-4" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }} />
+                Verfügbar
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded" style={{ background: 'rgba(220,60,60,0.3)', border: '1px solid rgba(220,60,60,0.5)', filter: 'blur(1px)' }} />
+                Bereits vergeben
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded" style={{ background: 'rgba(60,120,220,0.25)', border: '1px solid rgba(60,120,220,0.4)', filter: 'blur(1px)' }} />
+                Nicht mehr buchbar (zu weit)
+              </span>
+            </div>
+            </>
           )}
         </Step>
       )}

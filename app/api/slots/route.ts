@@ -52,13 +52,13 @@ export async function GET(request: NextRequest) {
     : null
 
   const slots = allSlots.map(time => {
-    if (blocked.has(time)) return { time, available: false }
+    if (blocked.has(time)) return { time, available: false, status: 'booked' }
     if (lastBookingMins !== null) {
       const [h, m] = time.split(':').map(Number)
       const tMins = h * 60 + m
-      if (tMins > lastBookingMins + 30) return { time, available: false }
+      if (tMins > lastBookingMins + 60) return { time, available: false, status: 'too-far' }
     }
-    return { time, available: true }
+    return { time, available: true, status: 'available' }
   })
 
   return NextResponse.json({ slots, start_time: day.start_time, end_time: day.end_time })
