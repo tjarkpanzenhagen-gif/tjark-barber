@@ -51,7 +51,8 @@ export default function BookPage() {
   const pad = (getDay(startOfMonth(month)) + 6) % 7
 
   async function handleBook() {
-    if (!selectedDate || !selectedSlot || !name.trim()) return
+    if (!name.trim()) { setError('Bitte gib deinen Namen ein.'); return }
+    if (!selectedDate || !selectedSlot) return
     setBooking(true); setError('')
     const res = await fetch('/api/bookings', {
       method: 'POST',
@@ -206,7 +207,7 @@ export default function BookPage() {
               {error}
             </div>
           )}
-          <button onClick={handleBook} disabled={booking || !name.trim()}
+          <button onClick={handleBook} disabled={booking}
             className="w-full py-3.5 rounded-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
             style={{ background: 'var(--gold)', fontSize: '1rem' }}>
             {booking ? 'Buchung wird erstellt…' : 'Verbindlich buchen'}
