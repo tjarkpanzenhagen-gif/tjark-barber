@@ -1,10 +1,6 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 
-export default async function HomePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
+export default function HomePage() {
   return (
     <div className="flex items-center justify-center min-h-[80vh] px-4">
       <div className="text-center">
@@ -14,28 +10,11 @@ export default async function HomePage() {
         <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '15px' }}>
           Buch dir einen Slot.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          {user ? (
-            <>
-              <Link href="/book"
-                className="px-6 py-2.5 rounded-xl font-semibold text-black"
-                style={{ background: 'var(--gold)' }}>
-                Termin buchen
-              </Link>
-              <Link href="/dashboard"
-                className="px-6 py-2.5 rounded-xl font-medium"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}>
-                Meine Termine
-              </Link>
-            </>
-          ) : (
-            <Link href="/login"
-              className="px-6 py-2.5 rounded-xl font-semibold text-black"
-              style={{ background: 'var(--gold)' }}>
-              Anmelden
-            </Link>
-          )}
-        </div>
+        <Link href="/book"
+          className="px-6 py-2.5 rounded-xl font-semibold text-black"
+          style={{ background: 'var(--gold)' }}>
+          Termin buchen
+        </Link>
       </div>
     </div>
   )
