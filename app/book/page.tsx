@@ -63,10 +63,16 @@ function NotifyButton() {
         Nur wenn du den Button aktivierst, bekommst du automatisch eine Nachricht sobald neue Termine freigeschaltet werden.
       </p>
       {state === 'unsupported' ? (
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          Dein Browser unterstützt keine Benachrichtigungen.<br />
-          <span style={{ opacity: 0.7 }}>Tipp: Nutze Chrome auf Android oder füge die Seite auf dem iPhone zum Home-Bildschirm hinzu.</span>
-        </p>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          <p style={{ marginBottom: '10px' }}>Füge diese Seite zuerst zum iPhone Home-Bildschirm hinzu — danach funktionieren Benachrichtigungen:</p>
+          <ol style={{ paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <li>Tippe unten in Safari auf das <strong style={{ color: 'var(--text)' }}>Teilen-Symbol</strong> <span style={{ fontSize: '14px' }}>⎋</span></li>
+            <li>Scrolle und wähle <strong style={{ color: 'var(--text)' }}>&quot;Zum Home-Bildschirm&quot;</strong></li>
+            <li>Tippe oben rechts auf <strong style={{ color: 'var(--text)' }}>&quot;Hinzufügen&quot;</strong></li>
+            <li>Öffne die App vom Home-Bildschirm</li>
+            <li>Aktiviere hier die Benachrichtigungen</li>
+          </ol>
+        </div>
       ) : state === 'denied' ? (
         <p style={{ fontSize: '12px', color: '#ff7070' }}>Benachrichtigungen wurden blockiert. Bitte in den Browser-Einstellungen erlauben.</p>
       ) : state === 'subscribed' ? (
