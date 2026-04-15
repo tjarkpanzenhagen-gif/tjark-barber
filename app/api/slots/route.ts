@@ -34,7 +34,19 @@ export async function GET(request: NextRequest) {
 
   if (!day) return NextResponse.json({ slots: [] })
 
+  // For today: filter out slots that have already passed (Berlin time = UTC+1/+2)
+  const nowUtc = new Date()
+  const berlinOffset = nowUtc.toLocaleString('en', { timeZone: 'Europe/Berlin', hour12: false }).split(',')[1]
+  const berlinNow = new Date(nowUtc.toLocaleString('en-US', { timeZone: 'Europe/Berlin' }))
+  const isToday = date === berlinNow.toISOString().split('T')[0]
+  const nowMins = isToday ? berlinNow.getHours() * 60 + berlinNow.getMinutes() : null
+
   const allSlots = generateSlots(day.start_time, day.end_time)
+    .filter(time => {
+      if (nowMins === null) return true
+      const [h, m] = time.split(':').map(Number)
+      return h * 60 + m >= nowMins
+    })
 
   const { data: bookings } = await supabase
     .from('bookings')

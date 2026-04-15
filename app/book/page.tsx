@@ -51,7 +51,21 @@ export default function BookPage() {
       .then(d => { setSlots(d.slots || []); setLoadingSlots(false) })
   }, [selectedDate])
 
-  const availableSet = new Set(availableDays.filter(d => d.is_available).map(d => d.date))
+  const nowMins = (() => {
+    const now = new Date()
+    return now.getHours() * 60 + now.getMinutes()
+  })()
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
+
+  const availableSet = new Set(availableDays.filter(d => {
+    if (!d.is_available) return false
+    // Close today once end_time + 30min has passed
+    if (d.date === todayStr) {
+      const [h, m] = d.end_time.split(':').map(Number)
+      if (nowMins >= h * 60 + m) return false
+    }
+    return true
+  }).map(d => d.date))
   const days = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) })
   const pad = (getDay(startOfMonth(month)) + 6) % 7
 

@@ -14,6 +14,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     .update({ status: 'cancelled' })
     .eq('id', id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    if (error.code === '23505') {
+      // Unique constraint: a cancelled entry already exists for this slot.
+      // Just delete the active booking instead.
+      await admin.from('bookings').delete().eq('id', id)
+      return NextResponse.json({ success: true })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json({ success: true })
 }
