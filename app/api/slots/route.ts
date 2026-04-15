@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 function generateSlots(startTime: string, endTime: string): string[] {
   const slots: string[] = []
   const [startH, startM] = startTime.split(':').map(Number)
@@ -36,8 +38,8 @@ export async function GET(request: NextRequest) {
 
   // For today: calculate current time in Berlin timezone
   const berlinNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Berlin' }))
-  const isToday = date === berlinNow.toISOString().split('T')[0]
-  const nowMins = isToday ? berlinNow.getHours() * 60 + berlinNow.getMinutes() : null
+  const berlinDateStr = `${berlinNow.getFullYear()}-${String(berlinNow.getMonth() + 1).padStart(2, '0')}-${String(berlinNow.getDate()).padStart(2, '0')}`
+  const nowMins = date === berlinDateStr ? berlinNow.getHours() * 60 + berlinNow.getMinutes() : null
 
   const allSlots = generateSlots(day.start_time, day.end_time)
 

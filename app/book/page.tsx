@@ -46,7 +46,7 @@ export default function BookPage() {
     if (!selectedDate) { setSlots([]); return }
     setLoadingSlots(true)
     setSelectedSlot(null)
-    fetch(`/api/slots?date=${selectedDate}`)
+    fetch(`/api/slots?date=${selectedDate}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(d => { setSlots(d.slots || []); setLoadingSlots(false) })
   }, [selectedDate])
@@ -82,7 +82,7 @@ export default function BookPage() {
     setBooking(false)
     if (!res.ok) {
       setError(data.error || 'Fehler beim Buchen')
-      fetch(`/api/slots?date=${selectedDate}`)
+      fetch(`/api/slots?date=${selectedDate}`, { cache: 'no-store' })
         .then(r => r.json())
         .then(d => { setSlots(d.slots || []); setSelectedSlot(null) })
       return
