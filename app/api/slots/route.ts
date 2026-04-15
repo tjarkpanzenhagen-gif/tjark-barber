@@ -49,9 +49,11 @@ export async function GET(request: NextRequest) {
     .eq('date', date)
     .eq('status', 'active')
 
-  const bookedTimes = bookings?.map(b => b.time) ?? []
+  // Normalize time to HH:MM:SS regardless of what Supabase returns
+  const norm = (t: string) => t.length === 5 ? `${t}:00` : t
+  const bookedTimes = bookings?.map(b => norm(b.time)) ?? []
   const blocked = new Set<string>(bookedTimes)
-  const nameByTime = new Map(bookings?.map(b => [b.time, b.customer_name]) ?? [])
+  const nameByTime = new Map(bookings?.map(b => [norm(b.time), b.customer_name]) ?? [])
 
   // If there are existing bookings, only show slots within 30 min of the last booking
   // (haircut = 30 min, prevents gaps where the barber would just be waiting)
@@ -79,5 +81,8 @@ export async function GET(request: NextRequest) {
       return { time, available: true, customer_name: null }
     })
 
-  return NextResponse.json({ slots, start_time: day.start_time, end_time: day.end_time })
+  return NextResponse.json(
+    { slots, start_time: day.start_time, end_time: day.end_time },
+    { headers: { 'Cache-Control': 'no-store' } }
+  )
 }
