@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       // Too-far: available=false, no customer_name → frontend shows as locked
       if (lastBookingMins !== null) {
         const [h, m] = time.split(':').map(Number)
-        if (h * 60 + m > lastBookingMins + 60) return { time, available: false, customer_name: null }
+        if (h * 60 + m > lastBookingMins + 30) return { time, available: false, customer_name: null }
       }
       return { time, available: true, customer_name: null }
     })
