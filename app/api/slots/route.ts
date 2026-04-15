@@ -61,9 +61,7 @@ export async function GET(request: NextRequest) {
 
   const slots = allSlots
     .filter(time => {
-      // Always keep booked slots visible (show customer name)
-      if (blocked.has(time)) return true
-      // For today: hide past available slots
+      // For today: hide past slots (booked or not)
       if (nowMins !== null) {
         const [h, m] = time.split(':').map(Number)
         if (h * 60 + m < nowMins) return false
@@ -71,13 +69,14 @@ export async function GET(request: NextRequest) {
       return true
     })
     .map(time => {
-      if (blocked.has(time)) return { time, available: false, status: 'booked', customer_name: nameByTime.get(time) ?? null }
+      // Booked: available=false, customer_name set → frontend will hide it
+      if (blocked.has(time)) return { time, available: false, customer_name: nameByTime.get(time) ?? null }
+      // Too-far: available=false, no customer_name → frontend shows as locked
       if (lastBookingMins !== null) {
         const [h, m] = time.split(':').map(Number)
-        const tMins = h * 60 + m
-        if (tMins > lastBookingMins + 60) return { time, available: false, status: 'too-far', customer_name: null }
+        if (h * 60 + m > lastBookingMins + 60) return { time, available: false, customer_name: null }
       }
-      return { time, available: true, status: 'available', customer_name: null }
+      return { time, available: true, customer_name: null }
     })
 
   return NextResponse.json({ slots, start_time: day.start_time, end_time: day.end_time })

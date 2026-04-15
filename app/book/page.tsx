@@ -19,7 +19,6 @@ interface AvailableDay {
 interface Slot {
   time: string
   available: boolean
-  status: 'available' | 'booked' | 'too-far'
   customer_name: string | null
 }
 
@@ -193,38 +192,44 @@ export default function BookPage() {
             <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Keine Zeitslots verfügbar.</div>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {slots.map(slot => {
-                const sel = selectedSlot === slot.time
-                const unavailable = !slot.available
-                const label = slot.customer_name
-                  ? slot.customer_name
-                  : unavailable
-                  ? 'Ausstehend'
-                  : 'Offen'
-                return (
-                  <button key={slot.time} disabled={unavailable}
-                    onClick={() => setSelectedSlot(s => s === slot.time ? null : slot.time)}
-                    className="rounded-xl font-medium transition-all flex flex-col items-center justify-center gap-1"
-                    style={{
-                      padding: '12px 8px',
-                      background: sel ? 'var(--gold)' : 'var(--surface2)',
-                      color: sel ? '#000' : unavailable ? 'var(--text-muted)' : 'var(--text)',
-                      border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
-                      cursor: unavailable ? 'not-allowed' : 'pointer',
-                      opacity: unavailable ? 0.5 : 1,
-                      pointerEvents: unavailable ? 'none' : 'auto',
-                    }}>
-                    <span style={{ fontSize: '1rem', fontWeight: 700 }}>{fmt(slot.time)}</span>
-                    <span style={{
-                      fontSize: '11px',
-                      maxWidth: '100%',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      opacity: sel ? 0.7 : 0.6,
-                    }}>{label}</span>
-                  </button>
-                )
+              {slots
+                .filter(slot => slot.available || !slot.customer_name)
+                .map(slot => {
+                  const sel = selectedSlot === slot.time
+                  const locked = !slot.available // too-far (booked ones are filtered out above)
+                  return locked ? (
+                    <div key={slot.time}
+                      className="rounded-xl flex flex-col items-center justify-center gap-1"
+                      style={{
+                        padding: '12px 8px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        background: 'var(--surface2)',
+                        border: '1px solid var(--border)',
+                        opacity: 0.35,
+                        userSelect: 'none',
+                      }}>
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.06) 5px, rgba(255,255,255,0.06) 10px)',
+                      }} />
+                      <span style={{ fontSize: '1rem', fontWeight: 700, position: 'relative', zIndex: 1, color: 'var(--text-muted)' }}>{fmt(slot.time)}</span>
+                    </div>
+                  ) : (
+                    <button key={slot.time}
+                      onClick={() => setSelectedSlot(s => s === slot.time ? null : slot.time)}
+                      className="rounded-xl font-medium transition-all flex flex-col items-center justify-center gap-1"
+                      style={{
+                        padding: '12px 8px',
+                        background: sel ? 'var(--gold)' : 'var(--surface2)',
+                        color: sel ? '#000' : 'var(--text)',
+                        border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
+                        cursor: 'pointer',
+                      }}>
+                      <span style={{ fontSize: '1rem', fontWeight: 700 }}>{fmt(slot.time)}</span>
+                      <span style={{ fontSize: '11px', opacity: sel ? 0.7 : 0.5 }}>Offen</span>
+                    </button>
+                  )
               })}
             </div>
           )}
