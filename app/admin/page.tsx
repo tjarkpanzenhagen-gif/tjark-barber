@@ -224,7 +224,19 @@ export default function AdminPage() {
         <div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '4px' }}>Admin</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Verfügbarkeiten & Buchungen verwalten</p>
-          {pushState !== 'unsupported' && (
+          {pushState === 'unsupported' ? (
+            <details className="mt-2" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              <summary style={{ cursor: 'pointer', color: 'var(--gold)', fontWeight: 500 }}>
+                🔔 Push aktivieren (iPhone-Anleitung)
+              </summary>
+              <ol style={{ paddingLeft: '16px', marginTop: '6px', lineHeight: 1.8 }}>
+                <li>Öffne diese Seite in <strong style={{ color: 'var(--text)' }}>Safari</strong></li>
+                <li>Tippe auf <strong style={{ color: 'var(--text)' }}>Teilen ⎋</strong> → <strong style={{ color: 'var(--text)' }}>„Zum Home-Bildschirm"</strong></li>
+                <li>App vom Home-Bildschirm öffnen</li>
+                <li>Dann erscheint hier der Aktivieren-Button</li>
+              </ol>
+            </details>
+          ) : (
             <button
               onClick={pushState === 'subscribed' ? unsubscribePush : subscribePush}
               className="mt-2 px-3 py-1.5 rounded-lg text-xs font-medium"
@@ -233,7 +245,7 @@ export default function AdminPage() {
                 border: `1px solid ${pushState === 'subscribed' ? 'var(--border)' : 'rgba(212,168,83,0.4)'}`,
                 color: pushState === 'subscribed' ? 'var(--text-muted)' : 'var(--gold)',
               }}>
-              {pushState === 'subscribed' ? '🔔 Buchungs-Push aktiv — deaktivieren' : '🔔 Push bei Buchungen aktivieren'}
+              {pushState === 'subscribed' ? '🔔 Push aktiv — deaktivieren' : '🔔 Push bei Buchungen aktivieren'}
             </button>
           )}
         </div>
