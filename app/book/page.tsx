@@ -16,7 +16,12 @@ interface AvailableDay {
   is_available: boolean
 }
 
-interface Slot { time: string; available: boolean; status: 'available' | 'booked' | 'too-far' }
+interface Slot {
+  time: string
+  available: boolean
+  status: 'available' | 'booked' | 'too-far'
+  customer_name: string | null
+}
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const fmt = (t: string) => t.slice(0, 5)
@@ -63,7 +68,6 @@ export default function BookPage() {
     setBooking(false)
     if (!res.ok) {
       setError(data.error || 'Fehler beim Buchen')
-      // Refresh slots so stale availability gets corrected
       fetch(`/api/slots?date=${selectedDate}`)
         .then(r => r.json())
         .then(d => { setSlots(d.slots || []); setSelectedSlot(null) })
@@ -174,31 +178,43 @@ export default function BookPage() {
           ) : slots.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Keine Zeitslots verfügbar.</div>
           ) : (
-            <>
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {slots.map(slot => {
                 const sel = selectedSlot === slot.time
                 const isBooked = slot.status === 'booked'
                 const isTooFar = slot.status === 'too-far'
                 const unavailable = isBooked || isTooFar
-                const icon = isBooked ? '✕' : isTooFar ? '⏳' : '✓'
+                const label = isBooked
+                  ? (slot.customer_name ?? 'Vergeben')
+                  : isTooFar
+                  ? 'Ausstehend'
+                  : 'Offen'
                 return (
-                  <button key={slot.time} disabled={unavailable} onClick={() => setSelectedSlot(s => s === slot.time ? null : slot.time)}
-                    className="py-2 rounded-xl text-sm font-medium transition-all flex flex-col items-center justify-center gap-0.5"
+                  <button key={slot.time} disabled={unavailable}
+                    onClick={() => setSelectedSlot(s => s === slot.time ? null : slot.time)}
+                    className="rounded-xl font-medium transition-all flex flex-col items-center justify-center gap-1"
                     style={{
+                      padding: '12px 8px',
                       background: sel ? 'var(--gold)' : 'var(--surface2)',
                       color: sel ? '#000' : unavailable ? 'var(--text-muted)' : 'var(--text)',
                       border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
                       cursor: unavailable ? 'not-allowed' : 'pointer',
-                      opacity: unavailable ? 0.45 : 1,
+                      opacity: unavailable ? 0.5 : 1,
                       pointerEvents: unavailable ? 'none' : 'auto',
                     }}>
-                    <span style={{ fontSize: '11px', opacity: 0.7 }}>{icon}</span>
-                    <span>{fmt(slot.time)}</span>
+                    <span style={{ fontSize: '1rem', fontWeight: 700 }}>{fmt(slot.time)}</span>
+                    <span style={{
+                      fontSize: '11px',
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      opacity: sel ? 0.7 : 0.6,
+                    }}>{label}</span>
                   </button>
                 )
               })}
-            </>
+            </div>
           )}
         </Step>
       )}

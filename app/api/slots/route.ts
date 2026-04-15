@@ -38,12 +38,13 @@ export async function GET(request: NextRequest) {
 
   const { data: bookings } = await supabase
     .from('bookings')
-    .select('time')
+    .select('time, customer_name')
     .eq('date', date)
     .eq('status', 'active')
 
   const bookedTimes = bookings?.map(b => b.time) ?? []
   const blocked = new Set<string>(bookedTimes)
+  const nameByTime = new Map(bookings?.map(b => [b.time, b.customer_name]) ?? [])
 
   // If there are existing bookings, only show slots within 30 min of the last booking
   // (haircut = 30 min, prevents gaps where the barber would just be waiting)
@@ -52,13 +53,13 @@ export async function GET(request: NextRequest) {
     : null
 
   const slots = allSlots.map(time => {
-    if (blocked.has(time)) return { time, available: false, status: 'booked' }
+    if (blocked.has(time)) return { time, available: false, status: 'booked', customer_name: nameByTime.get(time) ?? null }
     if (lastBookingMins !== null) {
       const [h, m] = time.split(':').map(Number)
       const tMins = h * 60 + m
-      if (tMins > lastBookingMins + 60) return { time, available: false, status: 'too-far' }
+      if (tMins > lastBookingMins + 60) return { time, available: false, status: 'too-far', customer_name: null }
     }
-    return { time, available: true, status: 'available' }
+    return { time, available: true, status: 'available', customer_name: null }
   })
 
   return NextResponse.json({ slots, start_time: day.start_time, end_time: day.end_time })
