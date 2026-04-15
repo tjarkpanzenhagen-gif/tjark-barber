@@ -27,8 +27,10 @@ const fmt = (t: string) => t.slice(0, 5)
 
 function NotifyButton() {
   const [state, setState] = useState<'idle' | 'subscribed' | 'denied' | 'unsupported'>('idle')
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     if (!('Notification' in window) || !('serviceWorker' in navigator)) { setState('unsupported'); return }
     if (Notification.permission === 'denied') { setState('denied'); return }
     navigator.serviceWorker.ready.then(reg =>
@@ -56,25 +58,35 @@ function NotifyButton() {
     setState('idle')
   }
 
+  if (!mounted) return null
+
   return (
-    <div className="rounded-xl p-4 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.5 }}>
-        🔔 <strong style={{ color: 'var(--text)' }}>Benachrichtigungen aktivieren</strong><br />
-        Nur wenn du den Button aktivierst, bekommst du automatisch eine Nachricht sobald neue Termine freigeschaltet werden.
+    <div className="rounded-xl p-4 mb-8" style={{
+      background: 'rgba(212,168,83,0.07)',
+      border: '1px solid rgba(212,168,83,0.3)',
+    }}>
+      <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
+        🔔 Neue Termine nie verpassen
       </p>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+        Aktiviere Benachrichtigungen — du bekommst automatisch eine Nachricht sobald ein neuer Tag freigeschaltet wird.
+      </p>
+
       {state === 'unsupported' ? (
-        <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          <p style={{ marginBottom: '10px' }}>Füge diese Seite zuerst zum iPhone Home-Bildschirm hinzu — danach funktionieren Benachrichtigungen:</p>
-          <ol style={{ paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <li>Tippe unten in Safari auf das <strong style={{ color: 'var(--text)' }}>Teilen-Symbol</strong> <span style={{ fontSize: '14px' }}>⎋</span></li>
-            <li>Scrolle und wähle <strong style={{ color: 'var(--text)' }}>&quot;Zum Home-Bildschirm&quot;</strong></li>
-            <li>Tippe oben rechts auf <strong style={{ color: 'var(--text)' }}>&quot;Hinzufügen&quot;</strong></li>
-            <li>Öffne die App vom Home-Bildschirm</li>
-            <li>Aktiviere hier die Benachrichtigungen</li>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+          <p style={{ marginBottom: '8px', color: 'var(--text)' }}>📱 iPhone-Anleitung:</p>
+          <ol style={{ paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <li>Öffne diese Seite in <strong style={{ color: 'var(--text)' }}>Safari</strong></li>
+            <li>Tippe auf das <strong style={{ color: 'var(--text)' }}>Teilen-Symbol</strong> <span>⎋</span> unten</li>
+            <li>Wähle <strong style={{ color: 'var(--text)' }}>„Zum Home-Bildschirm"</strong></li>
+            <li>Tippe <strong style={{ color: 'var(--text)' }}>„Hinzufügen"</strong></li>
+            <li>Öffne die App vom Home-Bildschirm und aktiviere hier die Benachrichtigungen</li>
           </ol>
         </div>
       ) : state === 'denied' ? (
-        <p style={{ fontSize: '12px', color: '#ff7070' }}>Benachrichtigungen wurden blockiert. Bitte in den Browser-Einstellungen erlauben.</p>
+        <p style={{ fontSize: '13px', color: '#ff7070' }}>
+          Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen erlauben.
+        </p>
       ) : state === 'subscribed' ? (
         <button onClick={unsubscribe}
           className="px-4 py-2 rounded-lg text-sm font-medium"
