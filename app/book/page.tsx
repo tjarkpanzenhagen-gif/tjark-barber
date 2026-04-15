@@ -25,6 +25,64 @@ interface Slot {
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const fmt = (t: string) => t.slice(0, 5)
 
+function NotifyButton() {
+  const [state, setState] = useState<'idle' | 'subscribed' | 'denied' | 'unsupported'>('idle')
+
+  useEffect(() => {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) { setState('unsupported'); return }
+    if (Notification.permission === 'denied') { setState('denied'); return }
+    navigator.serviceWorker.ready.then(reg =>
+      reg.pushManager.getSubscription().then(sub => { if (sub) setState('subscribed') })
+    )
+  }, [])
+
+  async function subscribe() {
+    const reg = await navigator.serviceWorker.ready
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    })
+    await fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) })
+    setState('subscribed')
+  }
+
+  async function unsubscribe() {
+    const reg = await navigator.serviceWorker.ready
+    const sub = await reg.pushManager.getSubscription()
+    if (sub) {
+      await fetch('/api/push', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) })
+      await sub.unsubscribe()
+    }
+    setState('idle')
+  }
+
+  if (state === 'unsupported') return null
+
+  return (
+    <div className="rounded-xl p-4 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.5 }}>
+        🔔 <strong style={{ color: 'var(--text)' }}>Benachrichtigungen aktivieren</strong><br />
+        Nur wenn du den Button aktivierst, bekommst du automatisch eine Nachricht sobald neue Termine freigeschaltet werden.
+      </p>
+      {state === 'denied' ? (
+        <p style={{ fontSize: '12px', color: '#ff7070' }}>Benachrichtigungen wurden blockiert. Bitte in den Browser-Einstellungen erlauben.</p>
+      ) : state === 'subscribed' ? (
+        <button onClick={unsubscribe}
+          className="px-4 py-2 rounded-lg text-sm font-medium"
+          style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+          ✓ Aktiv — Deaktivieren
+        </button>
+      ) : (
+        <button onClick={subscribe}
+          className="px-4 py-2 rounded-lg text-sm font-semibold text-black"
+          style={{ background: 'var(--gold)' }}>
+          Benachrichtigungen aktivieren
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function BookPage() {
   const [name, setName] = useState('')
   const [month, setMonth] = useState(new Date())
@@ -39,6 +97,7 @@ export default function BookPage() {
 
   useEffect(() => {
     fetch('/api/available-days').then(r => r.json()).then(d => setAvailableDays(Array.isArray(d) ? d : []))
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -118,9 +177,11 @@ export default function BookPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '4px' }}>Termin buchen</h1>
-      <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '32px' }}>
+      <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px' }}>
         Wähle einen verfügbaren Tag und Uhrzeit.
       </p>
+
+      <NotifyButton />
 
       <Step n={1} label="Dein Name" done={!!name.trim()}>
         <input

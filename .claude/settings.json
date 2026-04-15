@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --version)",
+      "Bash(command -v gh)",
+      "Bash(npm list:*)",
+      "Bash(node -e \"const h = require\\('@hugeicons/react'\\); const keys = Object.keys\\(h\\).filter\\(k => /bread|croissant|coffee|cup|family|user.*group|heart|home|clock|phone|mail|map|calendar|star|cake|wheat/i.test\\(k\\)\\); console.log\\(keys.slice\\(0,40\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e \"const h = require\\('@hugeicons/react'\\); console.log\\(Object.keys\\(h\\).slice\\(0,10\\)\\); console.log\\('total:', Object.keys\\(h\\).length\\)\")",
+      "Bash(node -e \"const h = require\\('@hugeicons/core-free-icons'\\); const keys = Object.keys\\(h\\).filter\\(k => /bread|croissant|coffee|cup|family|user|heart|home|clock|phone|mail|map|calendar|cake|wheat|bakery/i.test\\(k\\)\\); console.log\\(keys.slice\\(0,30\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e ':*)",
+      "Bash(npx next *)",
+      "Bash(npx web-push *)"
+    ]
+  }
+}

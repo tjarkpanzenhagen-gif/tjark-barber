@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { isAdminAuthed } from '@/lib/admin-auth'
+import { sendPushToAll } from '@/lib/push'
 
 // GET — public
 export async function GET() {
@@ -31,5 +32,13 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Notify subscribers when a day is made available
+  if (is_available !== false) {
+    const d = new Date(date + 'T12:00:00')
+    const label = d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
+    sendPushToAll('Neuer Termin verfügbar 💈', `${label} ist jetzt buchbar.`).catch(() => {})
+  }
+
   return NextResponse.json(data)
 }
