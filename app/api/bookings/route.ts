@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { isAdminAuthed } from '@/lib/admin-auth'
+import { sendPushToAdmin } from '@/lib/push'
+
+export const runtime = 'nodejs'
 
 // GET /api/bookings — admin only
 export async function GET(request: NextRequest) {
@@ -82,5 +85,10 @@ export async function POST(request: NextRequest) {
     if (error.code === '23505') return NextResponse.json({ error: 'Zeitslot bereits belegt' }, { status: 409 })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  const d = new Date(date + 'T12:00:00')
+  const dateLabel = d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })
+  sendPushToAdmin('Neue Buchung 💈', `${customer_name.trim()} — ${dateLabel} um ${time.slice(0, 5)} Uhr`).catch(() => {})
+
   return NextResponse.json(booking, { status: 201 })
 }

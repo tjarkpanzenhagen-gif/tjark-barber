@@ -41,10 +41,44 @@ export default function AdminPage() {
   const [cancelling, setCancelling] = useState<string | null>(null)
   const [filterDate, setFilterDate] = useState('')
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
+  const [pushState, setPushState] = useState<'idle' | 'subscribed' | 'unsupported'>('idle')
 
   useEffect(() => {
     fetch('/api/auth/admin').then(r => setAuthed(r.ok))
   }, [])
+
+  useEffect(() => {
+    if (!authed) return
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) { setPushState('unsupported'); return }
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
+    navigator.serviceWorker.ready.then(reg =>
+      reg.pushManager.getSubscription().then(sub => { if (sub) setPushState('subscribed') })
+    )
+  }, [authed])
+
+  async function subscribePush() {
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      })
+      await fetch('/api/push/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) })
+      setPushState('subscribed')
+      showToast('Benachrichtigungen aktiviert!')
+    } catch { showToast('Fehler beim Aktivieren', false) }
+  }
+
+  async function unsubscribePush() {
+    const reg = await navigator.serviceWorker.ready
+    const sub = await reg.pushManager.getSubscription()
+    if (sub) {
+      await fetch('/api/push/admin', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) })
+      await sub.unsubscribe()
+    }
+    setPushState('idle')
+    showToast('Benachrichtigungen deaktiviert')
+  }
 
   useEffect(() => { if (authed) { loadDays(); loadBookings() } }, [authed])
   useEffect(() => { if (authed) loadBookings() }, [filterDate])
@@ -190,6 +224,18 @@ export default function AdminPage() {
         <div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '4px' }}>Admin</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Verfügbarkeiten & Buchungen verwalten</p>
+          {pushState !== 'unsupported' && (
+            <button
+              onClick={pushState === 'subscribed' ? unsubscribePush : subscribePush}
+              className="mt-2 px-3 py-1.5 rounded-lg text-xs font-medium"
+              style={{
+                background: pushState === 'subscribed' ? 'var(--surface2)' : 'rgba(212,168,83,0.15)',
+                border: `1px solid ${pushState === 'subscribed' ? 'var(--border)' : 'rgba(212,168,83,0.4)'}`,
+                color: pushState === 'subscribed' ? 'var(--text-muted)' : 'var(--gold)',
+              }}>
+              {pushState === 'subscribed' ? '🔔 Buchungs-Push aktiv — deaktivieren' : '🔔 Push bei Buchungen aktivieren'}
+            </button>
+          )}
         </div>
         <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
           {(['calendar', 'bookings'] as const).map(t => (
