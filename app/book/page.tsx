@@ -181,37 +181,23 @@ export default function BookPage() {
                 const isBooked = slot.status === 'booked'
                 const isTooFar = slot.status === 'too-far'
                 const unavailable = isBooked || isTooFar
+                const icon = isBooked ? '✕' : isTooFar ? '⏳' : '✓'
                 return (
                   <button key={slot.time} disabled={unavailable} onClick={() => setSelectedSlot(s => s === slot.time ? null : slot.time)}
-                    className="py-2.5 rounded-xl text-sm font-medium transition-all"
+                    className="py-2 rounded-xl text-sm font-medium transition-all flex flex-col items-center justify-center gap-0.5"
                     style={{
-                      background: sel ? 'var(--gold)' : isBooked ? 'rgba(200,40,40,0.35)' : isTooFar ? 'rgba(50,100,220,0.28)' : 'var(--surface2)',
-                      color: sel ? '#000' : isBooked ? '#ff7070' : isTooFar ? '#7aabff' : 'var(--text)',
-                      border: `1px solid ${sel ? 'var(--gold)' : isBooked ? 'rgba(200,40,40,0.7)' : isTooFar ? 'rgba(50,100,220,0.6)' : 'var(--border)'}`,
+                      background: sel ? 'var(--gold)' : 'var(--surface2)',
+                      color: sel ? '#000' : unavailable ? 'var(--text-muted)' : 'var(--text)',
+                      border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
                       cursor: unavailable ? 'not-allowed' : 'pointer',
-                      filter: unavailable ? 'blur(1.5px)' : 'none',
-                      opacity: unavailable ? 0.55 : 1,
+                      opacity: unavailable ? 0.45 : 1,
                       pointerEvents: unavailable ? 'none' : 'auto',
                     }}>
-                    {fmt(slot.time)}
+                    <span style={{ fontSize: '11px', opacity: 0.7 }}>{icon}</span>
+                    <span>{fmt(slot.time)}</span>
                   </button>
                 )
               })}
-            </div>
-            <div className="flex flex-wrap items-center gap-4 mt-4" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }} />
-                Verfügbar
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded" style={{ background: 'rgba(220,60,60,0.3)', border: '1px solid rgba(220,60,60,0.5)', filter: 'blur(1px)' }} />
-                Bereits vergeben
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded" style={{ background: 'rgba(60,120,220,0.25)', border: '1px solid rgba(60,120,220,0.4)', filter: 'blur(1px)' }} />
-                Nicht mehr buchbar (zu weit)
-              </span>
-            </div>
             </>
           )}
         </Step>

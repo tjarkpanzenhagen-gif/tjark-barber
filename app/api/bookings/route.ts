@@ -78,6 +78,9 @@ export async function POST(request: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    if (error.code === '23505') return NextResponse.json({ error: 'Zeitslot bereits belegt' }, { status: 409 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json(booking, { status: 201 })
 }
