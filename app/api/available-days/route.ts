@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { isAdminAuthed } from '@/lib/admin-auth'
 import { sendPushToAll } from '@/lib/push'
 
+export const runtime = 'nodejs'
+
 // GET — public
 export async function GET() {
   const admin = await createAdminClient()
