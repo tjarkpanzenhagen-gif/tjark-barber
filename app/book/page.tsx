@@ -56,15 +56,18 @@ function NotifyButton() {
     setState('idle')
   }
 
-  if (state === 'unsupported') return null
-
   return (
     <div className="rounded-xl p-4 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
       <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.5 }}>
         🔔 <strong style={{ color: 'var(--text)' }}>Benachrichtigungen aktivieren</strong><br />
         Nur wenn du den Button aktivierst, bekommst du automatisch eine Nachricht sobald neue Termine freigeschaltet werden.
       </p>
-      {state === 'denied' ? (
+      {state === 'unsupported' ? (
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          Dein Browser unterstützt keine Benachrichtigungen.<br />
+          <span style={{ opacity: 0.7 }}>Tipp: Nutze Chrome auf Android oder füge die Seite auf dem iPhone zum Home-Bildschirm hinzu.</span>
+        </p>
+      ) : state === 'denied' ? (
         <p style={{ fontSize: '12px', color: '#ff7070' }}>Benachrichtigungen wurden blockiert. Bitte in den Browser-Einstellungen erlauben.</p>
       ) : state === 'subscribed' ? (
         <button onClick={unsubscribe}
