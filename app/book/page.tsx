@@ -195,12 +195,10 @@ export default function BookPage() {
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {slots.map(slot => {
                 const sel = selectedSlot === slot.time
-                const isBooked = slot.status === 'booked'
-                const isTooFar = slot.status === 'too-far'
-                const unavailable = isBooked || isTooFar
-                const label = isBooked
-                  ? (slot.customer_name ?? 'Vergeben')
-                  : isTooFar
+                const unavailable = !slot.available
+                const label = slot.customer_name
+                  ? slot.customer_name
+                  : unavailable
                   ? 'Ausstehend'
                   : 'Offen'
                 return (
