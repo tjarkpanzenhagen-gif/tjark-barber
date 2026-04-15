@@ -55,11 +55,11 @@ export async function GET(request: NextRequest) {
   const blocked = new Set<string>(bookedTimes)
   const nameByTime = new Map(bookings?.map(b => [norm(b.time), b.customer_name]) ?? [])
 
-  // If there are existing bookings, only show slots within 30 min of the last booking
+  // If there are existing bookings, only show slots directly adjacent (±30 min) to the booked block
   // (haircut = 30 min, prevents gaps where the barber would just be waiting)
-  const lastBookingMins = bookedTimes.length > 0
-    ? Math.max(...bookedTimes.map(t => { const [h, m] = t.split(':').map(Number); return h * 60 + m }))
-    : null
+  const bookedMins = bookedTimes.map(t => { const [h, m] = t.split(':').map(Number); return h * 60 + m })
+  const firstBookingMins = bookedMins.length > 0 ? Math.min(...bookedMins) : null
+  const lastBookingMins  = bookedMins.length > 0 ? Math.max(...bookedMins) : null
 
   const slots = allSlots
     .filter(time => {
@@ -74,9 +74,11 @@ export async function GET(request: NextRequest) {
       // Booked: available=false, customer_name set → frontend will hide it
       if (blocked.has(time)) return { time, available: false, customer_name: nameByTime.get(time) ?? null }
       // Too-far: available=false, no customer_name → frontend shows as locked
-      if (lastBookingMins !== null) {
-        const [h, m] = time.split(':').map(Number)
-        if (h * 60 + m > lastBookingMins + 30) return { time, available: false, customer_name: null }
+      if (firstBookingMins !== null && lastBookingMins !== null) {
+        const slotMins = time.split(':').map(Number).slice(0, 2).reduce((h, m) => h * 60 + m)
+        if (slotMins > lastBookingMins + 30 || slotMins < firstBookingMins - 30) {
+          return { time, available: false, customer_name: null }
+        }
       }
       return { time, available: true, customer_name: null }
     })
