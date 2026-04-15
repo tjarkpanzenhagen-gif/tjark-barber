@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const date = searchParams.get('date')
   if (!date) return NextResponse.json({ error: 'date required' }, { status: 400 })
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   const { data: day } = await supabase
     .from('available_days')
