@@ -18,6 +18,9 @@ interface Booking {
 interface ExtraSlot {
   id: string; date: string; time: string
 }
+interface Slot {
+  time: string; available: boolean; customer_name: string | null
+}
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const fmt = (t: string) => t.slice(0, 5)
@@ -45,8 +48,10 @@ export default function AdminPage() {
   const [filterDate, setFilterDate] = useState('')
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
   const [extraSlots, setExtraSlots] = useState<ExtraSlot[]>([])
+  const [daySlots, setDaySlots] = useState<Slot[]>([])
   const [newExtraTime, setNewExtraTime] = useState('08:00')
   const [addingExtra, setAddingExtra] = useState(false)
+  const [addingExtraTime, setAddingExtraTime] = useState<string | null>(null)
   const [removingExtra, setRemovingExtra] = useState<string | null>(null)
   const [pushState, setPushState] = useState<'idle' | 'subscribed' | 'unsupported'>('idle')
 
@@ -124,12 +129,15 @@ export default function AdminPage() {
   function selectDate(dateStr: string) {
     setSelectedDate(dateStr)
     setExtraSlots([])
+    setDaySlots([])
     const existing = days.find(d => d.date === dateStr)
+    const isAvail = existing?.is_available ?? true
     setForm(existing
       ? { start_time: existing.start_time.slice(0, 5), end_time: existing.end_time.slice(0, 5), is_available: existing.is_available }
       : { start_time: '09:00', end_time: '18:00', is_available: true }
     )
     loadExtraSlots(dateStr)
+    if (isAvail) loadDaySlots(dateStr)
   }
 
   async function saveDay() {
@@ -162,17 +170,32 @@ export default function AdminPage() {
     setExtraSlots(Array.isArray(data) ? data : [])
   }
 
-  async function addExtraSlot() {
+  async function loadDaySlots(date: string) {
+    const res = await fetch(`/api/slots?date=${date}`, { cache: 'no-store' })
+    const data = await res.json()
+    setDaySlots(data.slots ?? [])
+  }
+
+  async function addExtraSlot(time?: string) {
     if (!selectedDate) return
-    setAddingExtra(true)
+    const slotTime = time ?? newExtraTime
+    if (time) setAddingExtraTime(time)
+    else setAddingExtra(true)
     const res = await fetch('/api/extra-slots', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: selectedDate, time: newExtraTime }),
+      body: JSON.stringify({ date: selectedDate, time: slotTime }),
     })
-    setAddingExtra(false)
-    if (res.ok) { showToast('Extra-Slot hinzugefügt!'); loadExtraSlots(selectedDate) }
-    else { const d = await res.json(); showToast(d.error || 'Fehler', false) }
+    if (time) setAddingExtraTime(null)
+    else setAddingExtra(false)
+    if (res.ok) {
+      showToast('Slot freigegeben!')
+      loadExtraSlots(selectedDate)
+      loadDaySlots(selectedDate)
+    } else {
+      const d = await res.json()
+      showToast(d.error || 'Fehler', false)
+    }
   }
 
   async function removeExtraSlot(id: string) {
@@ -180,8 +203,13 @@ export default function AdminPage() {
     setRemovingExtra(id)
     const res = await fetch(`/api/extra-slots/${id}`, { method: 'DELETE' })
     setRemovingExtra(null)
-    if (res.ok) { showToast('Extra-Slot entfernt'); loadExtraSlots(selectedDate) }
-    else { showToast('Fehler beim Entfernen', false) }
+    if (res.ok) {
+      showToast('Extra-Slot entfernt')
+      loadExtraSlots(selectedDate)
+      loadDaySlots(selectedDate)
+    } else {
+      showToast('Fehler beim Entfernen', false)
+    }
   }
 
   async function cancelBooking(id: string) {
@@ -403,46 +431,79 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                {form.is_available && (
-                  <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
-                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                      EXTRA SLOTS
-                    </p>
-                    {extraSlots.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {extraSlots.map(slot => (
-                          <div key={slot.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
-                            style={{ background: 'rgba(212,168,83,0.1)', border: '1px solid rgba(212,168,83,0.3)' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gold)' }}>{fmt(slot.time)}</span>
-                            <button
-                              onClick={() => removeExtraSlot(slot.id)}
-                              disabled={removingExtra === slot.id}
-                              className="flex items-center justify-center w-4 h-4 rounded-full hover:opacity-70 transition-opacity disabled:opacity-40"
-                              style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1 }}>
-                              ×
-                            </button>
+                {form.is_available && (() => {
+                  const norm = (t: string) => t.length === 5 ? `${t}:00` : t
+                  const extraTimesSet = new Set(extraSlots.map(e => norm(e.time)))
+                  const lockedSlots = daySlots.filter(s => !s.available && s.customer_name === null && !extraTimesSet.has(norm(s.time)))
+                  return (
+                    <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '10px' }}>
+                        EXTRA SLOTS
+                      </p>
+
+                      {lockedSlots.length > 0 && (
+                        <div className="mb-4">
+                          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                            Gesperrt — klicke zum Freigeben:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {lockedSlots.map(slot => (
+                              <button
+                                key={slot.time}
+                                onClick={() => addExtraSlot(fmt(slot.time))}
+                                disabled={addingExtraTime === fmt(slot.time)}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-40"
+                                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600 }}>{fmt(slot.time)}</span>
+                                <span style={{ fontSize: '11px' }}>{addingExtraTime === fmt(slot.time) ? '…' : '+'}</span>
+                              </button>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+                      )}
+
+                      {extraSlots.length > 0 && (
+                        <div className="mb-4">
+                          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                            Freigeschaltet:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {extraSlots.map(slot => (
+                              <div key={slot.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
+                                style={{ background: 'rgba(212,168,83,0.1)', border: '1px solid rgba(212,168,83,0.3)' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gold)' }}>{fmt(slot.time)}</span>
+                                <button
+                                  onClick={() => removeExtraSlot(slot.id)}
+                                  disabled={removingExtra === slot.id}
+                                  className="hover:opacity-70 transition-opacity disabled:opacity-40"
+                                  style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1 }}>
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <input
+                          type="time"
+                          value={newExtraTime}
+                          onChange={e => setNewExtraTime(e.target.value)}
+                          className="px-3 py-2 rounded-xl text-sm outline-none"
+                          style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                        />
+                        <button
+                          onClick={() => addExtraSlot()}
+                          disabled={addingExtra}
+                          className="px-4 py-2 rounded-xl text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
+                          style={{ background: 'var(--gold)' }}>
+                          {addingExtra ? '…' : '+ Manuell'}
+                        </button>
                       </div>
-                    )}
-                    <div className="flex gap-2">
-                      <input
-                        type="time"
-                        value={newExtraTime}
-                        onChange={e => setNewExtraTime(e.target.value)}
-                        className="px-3 py-2 rounded-xl text-sm outline-none"
-                        style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                      />
-                      <button
-                        onClick={addExtraSlot}
-                        disabled={addingExtra}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
-                        style={{ background: 'var(--gold)' }}>
-                        {addingExtra ? '…' : '+ Hinzufügen'}
-                      </button>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
               </>
             )}
           </div>
