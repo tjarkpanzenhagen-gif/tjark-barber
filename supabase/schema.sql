@@ -23,6 +23,24 @@ create table if not exists public.bookings (
   created_at timestamptz default now()
 );
 
+-- Extra slots table (manual slots outside normal window)
+create table if not exists public.extra_slots (
+  id uuid primary key default uuid_generate_v4(),
+  date date not null,
+  time time not null,
+  created_at timestamptz default now(),
+  unique(date, time)
+);
+
+alter table public.extra_slots enable row level security;
+
+drop policy if exists "Service role can manage extra slots" on public.extra_slots;
+
+create policy "Service role can manage extra slots"
+  on public.extra_slots for all
+  using (true)
+  with check (true);
+
 -- Unique constraint: only one active booking per slot
 create unique index if not exists bookings_active_slot_unique
   on public.bookings(date, time)

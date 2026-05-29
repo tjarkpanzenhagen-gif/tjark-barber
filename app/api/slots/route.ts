@@ -43,17 +43,18 @@ export async function GET(request: NextRequest) {
 
   const allSlots = generateSlots(day.start_time, day.end_time)
 
-  const { data: bookings } = await supabase
-    .from('bookings')
-    .select('time, customer_name')
-    .eq('date', date)
-    .eq('status', 'active')
+  const [bookingsResult, extraSlotsResult] = await Promise.all([
+    supabase.from('bookings').select('time, customer_name').eq('date', date).eq('status', 'active'),
+    supabase.from('extra_slots').select('id, time').eq('date', date),
+  ])
 
   // Normalize time to HH:MM:SS regardless of what Supabase returns
   const norm = (t: string) => t.length === 5 ? `${t}:00` : t
-  const bookedTimes = bookings?.map(b => norm(b.time)) ?? []
+  const bookedTimes = bookingsResult.data?.map(b => norm(b.time)) ?? []
   const blocked = new Set<string>(bookedTimes)
-  const nameByTime = new Map(bookings?.map(b => [norm(b.time), b.customer_name]) ?? [])
+  const nameByTime = new Map(bookingsResult.data?.map(b => [norm(b.time), b.customer_name]) ?? [])
+
+  const extraTimes = new Set((extraSlotsResult.data ?? []).map(e => norm(e.time)))
 
   // If there are existing bookings, only show slots directly adjacent (±30 min) to the booked block
   // (haircut = 30 min, prevents gaps where the barber would just be waiting)
@@ -61,7 +62,11 @@ export async function GET(request: NextRequest) {
   const firstBookingMins = bookedMins.length > 0 ? Math.min(...bookedMins) : null
   const lastBookingMins  = bookedMins.length > 0 ? Math.max(...bookedMins) : null
 
-  const slots = allSlots
+  // Merge: regular slots + extra slots (deduplicated by time)
+  const allTimes = [...new Set([...allSlots, ...(extraSlotsResult.data ?? []).map(e => norm(e.time))])]
+    .sort()
+
+  const slots = allTimes
     .filter(time => {
       // For today: hide past slots (booked or not)
       if (nowMins !== null) {
@@ -73,6 +78,8 @@ export async function GET(request: NextRequest) {
     .map(time => {
       // Booked: available=false, customer_name set → frontend will hide it
       if (blocked.has(time)) return { time, available: false, customer_name: nameByTime.get(time) ?? null }
+      // Extra slots are always available (bypass adjacent-only restriction)
+      if (extraTimes.has(time)) return { time, available: true, customer_name: null }
       // Too-far: available=false, no customer_name → frontend shows as locked
       if (firstBookingMins !== null && lastBookingMins !== null) {
         const slotMins = time.split(':').map(Number).slice(0, 2).reduce((h, m) => h * 60 + m)

@@ -15,6 +15,9 @@ interface Booking {
   id: string; date: string; time: string; status: 'active' | 'cancelled'
   customer_name: string; customer_email: string; created_at: string
 }
+interface ExtraSlot {
+  id: string; date: string; time: string
+}
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 const fmt = (t: string) => t.slice(0, 5)
@@ -41,6 +44,10 @@ export default function AdminPage() {
   const [cancelling, setCancelling] = useState<string | null>(null)
   const [filterDate, setFilterDate] = useState('')
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
+  const [extraSlots, setExtraSlots] = useState<ExtraSlot[]>([])
+  const [newExtraTime, setNewExtraTime] = useState('08:00')
+  const [addingExtra, setAddingExtra] = useState(false)
+  const [removingExtra, setRemovingExtra] = useState<string | null>(null)
   const [pushState, setPushState] = useState<'idle' | 'subscribed' | 'unsupported'>('idle')
 
   useEffect(() => {
@@ -116,11 +123,13 @@ export default function AdminPage() {
 
   function selectDate(dateStr: string) {
     setSelectedDate(dateStr)
+    setExtraSlots([])
     const existing = days.find(d => d.date === dateStr)
     setForm(existing
       ? { start_time: existing.start_time.slice(0, 5), end_time: existing.end_time.slice(0, 5), is_available: existing.is_available }
       : { start_time: '09:00', end_time: '18:00', is_available: true }
     )
+    loadExtraSlots(dateStr)
   }
 
   async function saveDay() {
@@ -145,6 +154,34 @@ export default function AdminPage() {
     setSaving(false)
     setSelectedDate(null)
     loadDays()
+  }
+
+  async function loadExtraSlots(date: string) {
+    const res = await fetch(`/api/extra-slots?date=${date}`)
+    const data = await res.json()
+    setExtraSlots(Array.isArray(data) ? data : [])
+  }
+
+  async function addExtraSlot() {
+    if (!selectedDate) return
+    setAddingExtra(true)
+    const res = await fetch('/api/extra-slots', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: selectedDate, time: newExtraTime }),
+    })
+    setAddingExtra(false)
+    if (res.ok) { showToast('Extra-Slot hinzugefügt!'); loadExtraSlots(selectedDate) }
+    else { const d = await res.json(); showToast(d.error || 'Fehler', false) }
+  }
+
+  async function removeExtraSlot(id: string) {
+    if (!selectedDate) return
+    setRemovingExtra(id)
+    const res = await fetch(`/api/extra-slots/${id}`, { method: 'DELETE' })
+    setRemovingExtra(null)
+    if (res.ok) { showToast('Extra-Slot entfernt'); loadExtraSlots(selectedDate) }
+    else { showToast('Fehler beim Entfernen', false) }
   }
 
   async function cancelBooking(id: string) {
@@ -365,6 +402,47 @@ export default function AdminPage() {
                     </button>
                   )}
                 </div>
+
+                {form.is_available && (
+                  <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '10px' }}>
+                      EXTRA SLOTS
+                    </p>
+                    {extraSlots.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {extraSlots.map(slot => (
+                          <div key={slot.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                            style={{ background: 'rgba(212,168,83,0.1)', border: '1px solid rgba(212,168,83,0.3)' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gold)' }}>{fmt(slot.time)}</span>
+                            <button
+                              onClick={() => removeExtraSlot(slot.id)}
+                              disabled={removingExtra === slot.id}
+                              className="flex items-center justify-center w-4 h-4 rounded-full hover:opacity-70 transition-opacity disabled:opacity-40"
+                              style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1 }}>
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        type="time"
+                        value={newExtraTime}
+                        onChange={e => setNewExtraTime(e.target.value)}
+                        className="px-3 py-2 rounded-xl text-sm outline-none"
+                        style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                      />
+                      <button
+                        onClick={addExtraSlot}
+                        disabled={addingExtra}
+                        className="px-4 py-2 rounded-xl text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
+                        style={{ background: 'var(--gold)' }}>
+                        {addingExtra ? '…' : '+ Hinzufügen'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
